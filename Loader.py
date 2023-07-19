@@ -87,6 +87,7 @@ class Loader:
         if self.muon_df is not None:
             self.muon_evt = self.muon_df.query(query_event)
         self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
+        #if VERBOSE: print(f'Got run {run} subrun {subrun} event {event}')
         #Implement CRT here
     def get_pmt_list(self,tpc=None,coatings=[0,1,2,3]):
         """_summary_
@@ -108,6 +109,7 @@ class Loader:
         else:
             raise Exception(f'Invalid tpc : {tpc}')
         for ind,i in enumerate(pds_ids):
+            #if VERBOSE: print('pds_id : ',i)
             #Meta data
             meta = self.pmt_arapuca_info.loc[i]
             pds_location = np.array([meta.ophit_opdet_x,
@@ -117,21 +119,27 @@ class Loader:
             pds_tpc = meta.opdet_tpc
             
             #Get op info
+            s2 = time()
             op_df = self.op_evt[self.op_evt.ophit_opch == i]
             op_times = op_df.ophit_peakT.values
             op_pes = op_df.ophit_pe.values
             pds_op_pe = {'op_time': op_times, 'op_pe': op_pes}
+            s3 = time()
+            #if VERBOSE: print(f'-- get op time {s3-s2:.3f} s')
             
             if i in self.pmt_ids and self.wtree is not None:
                 #if VERBOSE: print('pds : ',i)
                 #if i == 0: print('WTF*'*120)
                 #Get waveform info
+                s4 = time()
                 hist_name = self.waveform_hist_name.replace('PDSID',str(i))
                 hist = self.wtree[hist_name]
                 #print(hist.to_numpy()[1])
                 times = convert_edges_to_centers(hist.to_numpy()[1])
                 voltages = hist.to_numpy()[0]
                 pmt_waveform = {'time': times, 'voltage': voltages}
+                s5 = time()
+                #if VERBOSE: print(f'-- get waveform {s5-s4:.3f} s')
             else:
                 pmt_waveform = None
             

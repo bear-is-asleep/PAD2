@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from variables import *
 import numpy as np
+from time import time
+from config.test import *
 
 class PMT:
     def __init__(self, id, coating, tpc, location, waveform=None, op_pe=None, t1=t1, t0=t0, dt=dt):
@@ -22,21 +24,21 @@ class PMT:
             self.op_pe = None
             self.bins = None
 
-    def plot_coordinates(self, start, end, cmap='viridis', cmin=0, cmax=2000):
+    def plot_coordinates(self, start, end, cmap='magma', cmin=0, cmax=2000):
         """ 
         Plots PMTs onto PAD grid
 
         Args:
             start (_type_): start time window
             end (_type_): end time window
-            cmap (str, optional): Defaults to 'viridis'.
+            cmap (str, optional): Defaults to 'magma'.
             cmin (int, optional): Defaults to 0.
             cmax (int, optional): Defaults to 10000.
 
         Returns:
             go.Scatter: scatter point to be plotted on dash canvas
         """
-        #print('pds id : ',self.id)
+        #if VERBOSE: print('pds id : ',self.id)
         z = [self.location[2]]
         y = [self.location[1]]
         if self.id in [6,7]: 
@@ -44,19 +46,13 @@ class PMT:
         else:
             showscale = False
         if self.op_pe is not None:
-            start_interval = pd.cut([start],self.bins,include_lowest=True)[0]
-            end_interval = pd.cut([end],self.bins)[0]
-            # print('-- start : ',start)
-            # print('-- end : ',end)
-            # print('-- start int : ',start_interval)
-            # print('-- end int : ',end_interval)
-            if start_interval < end_interval:
-                if start == t0: #handle edge case since include lowest is true
-                    selected_intervals = [bin for bin in self.bins if bin >= start_interval.left and bin <= end_interval.right]
-                else:
-                    selected_intervals = [bin for bin in self.bins if bin >= start_interval.left + self.dt/3 and bin <= end_interval.right]
-                selected_intervals = pd.Interval(left=selected_intervals[0], right=selected_intervals[-1])
-                mask = [selected_intervals.overlaps(i) for i in self.op_pe['time_bin']]
+            s0 = time()
+            start_ind = np.searchsorted(self.bins,start) 
+            end_ind = np.searchsorted(self.bins,end)  -1
+            if start_ind < end_ind:
+                mask = np.full(len(self.op_pe),False)
+                inds = list(range(start_ind,end_ind))
+                mask[inds] = True
                 color = self.op_pe.loc[mask, 'op_pe'].sum()
             else:
                 color = 0
@@ -64,6 +60,8 @@ class PMT:
                 color = 0
         else:
             color = 0
+        s1 = time()
+        #if VERBOSE: print(f'-- time to bin {s1-s0:.3f} s')
         msize = 18
         hex_color = map_value_to_color(color,cmin,cmax,cmap=cmap)
         text = f'ID : {self.id:.0f}'
@@ -73,7 +71,7 @@ class PMT:
         text += f'Cum. PE : {color:.2f}'
         # print('color : ',color)
         # print('hex : ',hex_color)
-        return go.Scatter(
+        sc = go.Scatter(
             x=z,
             y=y,
             mode='markers',
@@ -90,6 +88,9 @@ class PMT:
             text=text,  # display the color value on hover
             hoverinfo='text+name',  # show the custom text and trace name on hover
         )
+        s2 = time()
+        #if VERBOSE: print(f'-- time to make scatter {s2-s1:.3f} s')
+        return sc
 
     def plot_waveform(self):
         """

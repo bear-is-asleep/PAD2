@@ -9,41 +9,44 @@ import plotly.graph_objects as go
 from config.test import *
 from time import time
 
-app = dash.Dash(__name__)
+global pds_tpc0    # Declare pds_tpc0 as a global variable
 
+#Initialize
 l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,WFM_NAME) #Loader class with PMT, muon, CRT info
+#l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,None) #Loader class with PMT, muon, CRT info
 run_list = l.run_list #Get list of run,subrun,evt
 run,subrun,event = run_list[0]
-l.get_event(run,subrun,event)
 
-
-pds_tpc0 = l.get_pmt_list(tpc=0) #Get list of pmts
-#pds_tpc1 = l.get_pmt_list(tpc=1) #Get list of pmts
-# Plot coordinates
 start_bin = t0+dt
 end_bin = t1
 
-pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin) for pds in pds_tpc0]
+l.get_event(run,subrun,event)
+pds_tpc0 = l.get_pmt_list(tpc=0) #Get list of pmts
+#pds_tpc1 = l.get_pmt_list(tpc=1) #Get list of pmts
+cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0])#+pds_tpc1])
+cmin = 0
+
+
+app = dash.Dash(__name__)
+
+pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
 
 # Layout for the Dash app
 app.layout = html.Div(children=[
-    html.H1('TPC0'),
-    # ]+[
-    # html.Div(
-    #     children=[
-    #         dcc.Input(
-    #             id='input-{}-{}'.format(index, i),
-    #             type='number',  # Change the type to 'number' as inputs are integers
-    #             value=value,
-    #         )
-    #         for i, value in enumerate(option)
-    #     ]
-    # )
-    # for index, option in enumerate(run_list)
-    # ]+[
+    html.H1('PAD'),
+    html.Label('Run: '),
+    dcc.Input(id='run-input', type='number', value=run),  # initialize with run from l.run_list
+
+    html.Label('Subrun: '),
+    dcc.Input(id='subrun-input', type='number', value=subrun),  # initialize with subrun from l.run_list
+
+    html.Label('Event: '),
+    dcc.Input(id='event-input', type='number', value=event),  # initialize with event from l.run_list
+    html.Button('Submit', id='submit-button', n_clicks=0),
+    html.Br(),
     html.Label('t0 [ns]: '),
     dcc.Slider(
-        id='t0-tpc0',
+        id='t0',
         min=t0,  # minimum value
         max=t1,  # maximum value
         step=dt,  # step size
@@ -53,7 +56,7 @@ app.layout = html.Div(children=[
     ),
     html.Label('t1 [ns]: '),
     dcc.Slider(
-        id='t1-tpc1',
+        id='t1',
         min=t0,  # minimum value
         max=t1,  # maximum value
         step=dt,  # step size
@@ -61,6 +64,7 @@ app.layout = html.Div(children=[
         marks=None,
         tooltip={"placement": "bottom", "always_visible": True}
     ),
+    html.H2('TPC0'),
     html.Div(children=[
         dcc.Graph(
             id='tpc0',
@@ -84,25 +88,47 @@ app.layout = html.Div(children=[
 
 #Update PE
 @app.callback(
-    dash.dependencies.Output('tpc0', 'figure'),
-    [dash.dependencies.Input('t0-tpc0', 'value'),
-     dash.dependencies.Input('t1-tpc1', 'value')]
+    dash.dependencies.Output('tpc0', 'figure'),  
+    [dash.dependencies.Input('t0', 'value'),      
+     dash.dependencies.Input('t1', 'value'),
+     dash.dependencies.Input('submit-button', 'n_clicks')],  
+    [dash.dependencies.State('run-input', 'value'),  
+     dash.dependencies.State('subrun-input', 'value'),  
+     dash.dependencies.State('event-input', 'value')]  
 )
-def update_tpc0(start_time_bin,end_time_bin):
+
+def update_tpc0(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
+    global pds_tpc0    # Access the global variable pds_tpc0
+    ctx = dash.callback_context
+    if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':  # Check if the button triggered the callback
+        n_clicks -= 1
+        if [run,subrun,event] in l.run_list:
+            if VERBOSE: print(f'Retrieving Run {run} Subrun {subrun} Event {event}')
+            l.get_event(run, subrun, event)
+            pds_tpc0 = l.get_pmt_list(tpc=0)
+        else:
+            print(f'Run {run} Subrun {subrun} Event {event} not in file')
+            if VERBOSE: 
+                print('List of run,subrun,events - ')
+                #print(l.run_list)
+                return None
+    cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0])#+pds_tpc1])
+    cmin = 0
     if VERBOSE: print('Update time window')
     s0 = time()
-    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin) for pds in pds_tpc0]
+    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
     s1 = time()
     if VERBOSE: print(f'Get new PE from {start_time_bin} to {end_time_bin} (ns): {s1-s0:.2f} s')
+
     return go.Figure(data=pds_coordinates_tpc0,
-        layout=go.Layout(
-            autosize=False,
-            width=1000,
-            height=800,
-            showlegend=False,
-            xaxis=dict(range=[0, 500]),  # Set x-axis limits
-            yaxis=dict(range=[-200, 200])   # Set y-axis limits
-    ))
+                     layout=go.Layout(
+                         autosize=False,
+                         width=1000,
+                         height=800,
+                         showlegend=False,
+                         xaxis=dict(range=[0, 500]),  # Set x-axis limits
+                         yaxis=dict(range=[-200, 200])   # Set y-axis limits
+                     ))
 
 
 # Callback to update the waveform graph when the button is clicked
@@ -112,9 +138,8 @@ def update_tpc0(start_time_bin,end_time_bin):
 )
 
 def update_waveform_graph(click_data):
-    if VERBOSE: print('Drawing waveform')
     if click_data is not None:
-        #print(click_data)
+        if VERBOSE: print('Drawing waveform')
         pmt_id = click_data['points'][0]['customdata']
         ind = l.pds_tpc0_ids.index(pmt_id) #find index of pmt
         s0 = time()
@@ -131,7 +156,9 @@ def update_waveform_graph(click_data):
                                 height=300,
                                 title=dict(
                                     text=f'PDS ID : {pmt_id}'
-                                )
+                                ),
+                                xaxis_title='t [us]',
+                                yaxis_title='ADC',
                             ))
 
     return go.Figure()
