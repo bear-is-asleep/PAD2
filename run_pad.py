@@ -154,7 +154,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
             muons_tpc0 = l.get_muon_list(tpc=0)
             
             pds_tpc1 = l.get_pmt_list(tpc=1)
-            muons_tpc1 = l.get_muons_list(tpc=1)
+            muons_tpc1 = l.get_muon_list(tpc=1)
         else:
             print(f'Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 

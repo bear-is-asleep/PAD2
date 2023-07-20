@@ -15,4 +15,4 @@ HDUMP_NAME = 'hitdumper_tree.root'
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
 
 #Settings
-VERBOSE = True
+VERBOSE = False
