@@ -100,7 +100,8 @@ Muon 0 TPC1: (202.05,78.72,104.85) to (0.00,138.82,171.75)
 Dash is running on http://127.0.0.1:8050/
 ```
 Following this link will take you to the PAD display.
-
+![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD.png)
+* Zoomed out view of PAD * 
 ### Actions
 Time sliders change the range to integrate the PE for each PDS component
 * Moving the t0 slider will change the initial time for both TPCs
