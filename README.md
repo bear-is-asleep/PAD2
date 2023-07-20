@@ -114,6 +114,7 @@ The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA
 
 
 ## To-do 
+* Get official channel mapping (current one stored in `PMT_ARAPUCA_info.pkl`)
 * Get X-ARAPUCA waveform information
 * Implement truth level information - new class
 * Implement CRT tracks - new class
