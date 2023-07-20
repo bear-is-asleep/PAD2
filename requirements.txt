@@ -1,0 +1,7 @@
+uproot==4.1.3
+numpy
+pandas==1.3.3
+plotly
+dash
+matplotlib
+awkward-pandas

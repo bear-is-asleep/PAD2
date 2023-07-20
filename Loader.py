@@ -1,7 +1,7 @@
 import uproot
 import pandas as pd
 from variables import *
-from config.test import *
+from config.test2 import *
 from PMT import PMT
 from Muon import Muon
 from time import time
@@ -18,8 +18,10 @@ class Loader:
             pad_dir (_type_): _description_
             hdump_name (_type_): _description_
             wfm_name (_type_, optional): _description_. Defaults to None.
+            load_crt (bool, optional): Load CRT info from hitdumper. Defaults to False.
+            load_muon (bool, optional): Load muon info from hitdumper. Defaults to False.
             save_dir (_type_, optional): _description_. Defaults to None.
-            use_op (bool, optional): _description_. Defaults to True.
+            use_op (bool, optional): Use full optical reconstruction set to false to use software trigger PE (not supported yet). Defaults to True.
         """
         if VERBOSE: print('*'*60)
         
