@@ -106,13 +106,16 @@ Following this link will take you to the PAD display.
 Time sliders change the range to integrate the PE for each PDS component
 * Moving the t0 slider will change the initial time for both TPCs
 * Moving the t1 slider will change the final time for both TPCs
+* Takes about 100 ms to update
 
 A list of available runs are on the right
 * Entering the run, subrun, event of an event from the list on the right and clicking submit will update PAD to that readout
 * ⚠️ **Repeatedly clicking submit will overload the update command and cause the update to take a lot longer**
+* Takes about 10 s to update
 
 The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA waveforms are not included*)
 * Clicking on a PDS shows its waveform
+* Takes about 50 ms to update
 
 
 ## To-do 
