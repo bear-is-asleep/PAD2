@@ -27,7 +27,7 @@ parser.add_argument('--pad', default=os.getcwd(), required=False, help='PAD dire
 parser.add_argument('--hdump_name', default=HDUMP_NAME, required=False, help='hitdumper file name')
 parser.add_argument('--sm_name', default=SM_NAME, required=False, help='pmt software metrics file name')
 parser.add_argument('--wfm_name', default=WFM_NAME, required=False, help='waveform file name')
-parser.add_argument('--load_muon',type=bool, default=False, required=False, help='load muon info')
+parser.add_argument('--load_muon',type=bool, default=True, required=False, help='load muon info')
 parser.add_argument('--load_crt',type=bool, default=False, required=False, help='load crt info')
 parser.add_argument('--mode',type=str, default='op', help='Optical detector mode')
 
