@@ -6,8 +6,10 @@ from variables import *
 from PMT import PMT
 from Loader import Loader
 import plotly.graph_objects as go
-from config.test2 import *
 from time import time
+
+#Your config
+from config.software_pe import *
 
 global muons_tpc0
 global pds_tpc0
@@ -15,8 +17,9 @@ global muons_tpc1
 global pds_tpc1
 
 #Initialize
-#l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,WFM_NAME) #Loader class with PMT, muon, CRT info
-l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,WFM_NAME,load_muon=True) #Loader class with PMT, muon, CRT info
+#l = Loader(DATA_DIR,PAD_DIR,hdump_name=HDUMP_NAME,wfm_name=WFM_NAME) #Loader class with PMT, muon, CRT info
+#l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,WFM_NAME,load_muon=True) #Loader class with PMT, muon, CRT info
+l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,SM_NAME,WFM_NAME,mode='prompt')
 
 #Initialize display
 run_list = l.run_list #Get list of run,subrun,evt
@@ -26,18 +29,23 @@ end_bin = t1
 l.get_event(run,subrun,event)
 
 #PDS init
-pds_tpc0 = l.get_pmt_list(tpc=0) #Get list of pmts
-pds_tpc1 = l.get_pmt_list(tpc=1) #Get list of pmts
+pds_tpc0 = l.get_pmt_list(tpc=0,coatings=COATINGS) #Get list of pmts
+pds_tpc1 = l.get_pmt_list(tpc=1,coatings=COATINGS) #Get list of pmts
 cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
 cmin = 0
 pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
 pds_coordinates_tpc1 = [pds.plot_coordinates(start_bin,end_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc1]
 
 #Muon init
-muons_tpc0 = l.get_muon_list(tpc=0)
-muons_tpc1 = l.get_muon_list(tpc=1)
-muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
-muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+if l.load_muon:
+    muons_tpc0 = l.get_muon_list(tpc=0)
+    muons_tpc1 = l.get_muon_list(tpc=1)
+    muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
+    muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+else:
+    muon_lines_tpc0 = [go.Scatter()]
+    muon_lines_tpc1 = [go.Scatter()]
+
 
 #Start dash
 app = dash.Dash(__name__)
@@ -119,6 +127,11 @@ app.layout = html.Div(style={'display':'flex'},children=[
     ]),
     # Right-hand side
     html.Div(style={'width': '20%'},children=[
+        html.H1('Info - '),
+        html.H3(f'Mode : {l.mode}'),
+        html.H3(f'Coatings : {[c-1 for c in COATINGS]}'),
+        html.H3(f'Current event : '),
+        html.H5(f'    Run: {l.run}, Subrun {l.subrun}, Event {l.event}'),
         html.H2('Available Runs'),
         html.Ul(children=[
             html.Li(f'Run: {run}, Subrun: {subrun}, Event: {event}') for run, subrun, event in run_list
@@ -150,11 +163,17 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
             if VERBOSE: print(f'Retrieving Run {run} Subrun {subrun} Event {event}')
             l.get_event(run, subrun, event)
             
-            pds_tpc0 = l.get_pmt_list(tpc=0)
-            muons_tpc0 = l.get_muon_list(tpc=0)
+            pds_tpc0 = l.get_pmt_list(tpc=0,coatings=COATINGS)  
+            pds_tpc1 = l.get_pmt_list(tpc=1,coatings=COATINGS)
             
-            pds_tpc1 = l.get_pmt_list(tpc=1)
-            muons_tpc1 = l.get_muon_list(tpc=1)
+            if l.load_muon:
+                muons_tpc0 = l.get_muon_list(tpc=0)
+                muons_tpc1 = l.get_muon_list(tpc=1)
+                muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
+                muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+            else:
+                muon_lines_tpc0 = [go.Scatter()]
+                muon_lines_tpc1 = [go.Scatter()]
         else:
             print(f'Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
@@ -175,8 +194,12 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
     #Muons
     #if VERBOSE: print('Get muon trajectories')
     s0 = time()
-    muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
-    muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+    if l.load_muon:
+        muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
+        muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+    else:
+        muon_lines_tpc0 = [go.Scatter()]
+        muon_lines_tpc1 = [go.Scatter()]
     s1 = time()
     if VERBOSE: print(f'Get new muon trajectories : {s1-s0:.2f} s')
 

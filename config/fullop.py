@@ -15,4 +15,10 @@ HDUMP_NAME = 'hitdumper_tree.root'
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
 
 #Settings
-VERBOSE = False
+VERBOSE = True
+
+#Hdr keys
+HDRKEYS = ['run','subrun','event']
+
+#Coatings
+COATINGS = [0,1,2,3,4] #All PDS components

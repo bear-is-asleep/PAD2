@@ -1,34 +1,45 @@
 import uproot
 import pandas as pd
 from variables import *
-from config.test2 import *
 from PMT import PMT
 from Muon import Muon
 from time import time
 import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members
+import os
+
+#Your config import
+from config.software_pe import *
 
 class Loader:
-    def __init__(self,data_dir,pad_dir,hdump_name,wfm_name=None,load_muon=False,
-                 load_crt=False,save_dir=None,use_op=True):
+    def __init__(self,data_dir,pad_dir=None,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
+                 load_crt=False,save_dir=None,mode='op'):
         """Loads and stores trees
 
         Args:
             data_dir (_type_): _description_
             pad_dir (_type_): _description_
             hdump_name (_type_): _description_
+            software_name (str): Name of software metrics tree
             wfm_name (_type_, optional): _description_. Defaults to None.
             load_crt (bool, optional): Load CRT info from hitdumper. Defaults to False.
             load_muon (bool, optional): Load muon info from hitdumper. Defaults to False.
             save_dir (_type_, optional): _description_. Defaults to None.
-            use_op (bool, optional): Use full optical reconstruction set to false to use software trigger PE (not supported yet). Defaults to True.
+            mode (str, optional): Use full optical reconstruction set to prelim for prelimPE from software trigger
+                                    and set to prompt to view prompt PE
         """
         if VERBOSE: print('*'*60)
         
         #Other vars
         self.data_dir = data_dir
-        self.pad_dir = pad_dir
+        if pad_dir is None:
+            self.pad_dir = os.getcwd()
+        else:
+            self.pad_dir = pad_dir
         self.hdump_name = hdump_name
+        self.software_name = software_name
+        self.mode = mode
+        self.load_muon = load_muon
         
         #PMT/XA info
         s0 = time()
@@ -73,20 +84,33 @@ class Loader:
 
         #Commissioning tree info
         s0 = time()
-        tree = uproot.open(f'{data_dir}/{hdump_name}:hitdumper;1/hitdumpertree;1')
+        if self.hdump_name is None and self.software_name is not None:
+            tree = uproot.open(f'{data_dir}/{self.software_name}:pmtSoftwareTrigger/software_metrics_tree;1')
+        elif self.hdump_name is not None and self.software_name is None: 
+            tree = uproot.open(f'{data_dir}/{self.hdump_name}:hitdumper;1/hitdumpertree;1')
+        elif self.hdump_name is not None and self.software_name is not None:  #Default to hitdumper tree if both provided
+            tree = uproot.open(f'{data_dir}/{self.hdump_name}:hitdumper;1/hitdumpertree;1')
         s1 = time()
         if VERBOSE: print(f'Load commissioning tree : {s1-s0:.2f} s')
-        hdrkeys = ['run','subrun','event']
-        self.run_list = tree.arrays(hdrkeys,library='pd').values
+        self.run_list = tree.arrays(HDRKEYS,library='pd').values
         
         #Op info
         s0 = time()
         opkeys = [key for key in tree.keys() if 'op' == key[:2]]
-        pmtsoftkeys = [key for key in tree.keys() if 'pmtSoftTrigger' in key]
-        if use_op:
-            self.op_df = tree.arrays(hdrkeys+opkeys,library='pd')
+        pmtsoftkeys = [key for key in tree.keys() if 'ch_' in key]
+        if mode == 'op':
+            self.op_df = tree.arrays(HDRKEYS+opkeys,library='pd')
+        elif mode == 'prompt' or mode == 'prelim':
+            self.op_df = tree.arrays(HDRKEYS+pmtsoftkeys,library='pd')
+            #Temp fix for uproot not being able to read in values
+            exploded_columns = []
+            for column in self.op_df.columns:
+                if 'ch_' in column:
+                    self.op_df[column] = self.op_df[column][0]
+                    exploded_columns.append(column)
+            self.op_df = self.op_df.explode(exploded_columns)
         else:
-            self.op_df = tree.arrays(hdrkeys+opkeys,library='pd')
+            raise Exception(f'Invalid mode : {mode}')
         s1 = time()
         if VERBOSE: print(f'Load op info : {s1-s0:.2f} s')
         #PMT waveform info - optional
@@ -103,7 +127,7 @@ class Loader:
         muonkeys = [key for key in tree.keys() if 'muon' in key]
         if load_muon:
             s0 = time()
-            self.muon_df = tree.arrays(hdrkeys+muonkeys,library='pd')
+            self.muon_df = tree.arrays(HDRKEYS+muonkeys,library='pd')
             s1 = time()
             if VERBOSE: print(f'Load muon tracks : {s1-s0:.2f} s')
         else: 
@@ -119,13 +143,16 @@ class Loader:
         if VERBOSE: print('*'*60)
     def get_event(self,run,subrun,event):
         if [run,subrun,event] not in self.run_list:
-            if VERBOSE: print(f'run {run} subrun {subrun} event {event} not in file {self.data_dir}/{self.hdump_name}')
+            if VERBOSE: print(f'{HDRKEYS[0]} {run} {HDRKEYS[1]} {subrun} {HDRKEYS[2]} {event} not in file {self.data_dir}/{self.hdump_name}')
             return None
-        query_event = f'run == {run} and subrun == {subrun} and event == {event}'
+        query_event = f'{HDRKEYS[0]} == {run} and {HDRKEYS[1]} == {subrun} and {HDRKEYS[2]} == {event}'
         self.op_evt = self.op_df.query(query_event)
         if self.muon_df is not None:
             self.muon_evt = self.muon_df.query(query_event)
         self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
+        self.run = run
+        self.subrun = subrun
+        self.event = event
         #if VERBOSE: print(f'Got run {run} subrun {subrun} event {event}')
         #Implement CRT here
     def get_pmt_list(self,tpc=None,coatings=[0,1,2,3,4]):
@@ -172,9 +199,14 @@ class Loader:
             
             #Get op info
             s2 = time()
-            op_df = self.op_evt[self.op_evt.ophit_opch == i]
-            op_times = op_df.ophit_peakT.values
-            op_pes = op_df.ophit_pe.values
+            if self.mode == 'op':
+                op_df = self.op_evt[self.op_evt.ophit_opch == i]
+                op_times = op_df.ophit_peakT.values
+                op_pes = op_df.ophit_pe.values
+            elif self.mode == 'prompt' or self.mode == 'prelim':
+                op_df = self.op_evt[self.op_evt.ch_ID == i]
+                op_pes = op_df.loc[:,f'ch_{self.mode}PE'].values
+                op_times = [0]
             pds_op_pe = {'op_time': op_times, 'op_pe': op_pes}
             s3 = time()
             #if VERBOSE: print(f'-- get op time {s3-s2:.3f} s')
