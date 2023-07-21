@@ -7,19 +7,50 @@ from PMT import PMT
 from Loader import Loader
 import plotly.graph_objects as go
 from time import time
+import argparse
+import os
 
-#Your config
-from config.software_pe import *
+#Your config - you can also pass arguments
+from config.default import *
 
 global muons_tpc0
 global pds_tpc0
 global muons_tpc1
 global pds_tpc1
 
+# Create the parser
+parser = argparse.ArgumentParser(description="Load data")
+
+# Add the arguments
+parser.add_argument('--data', type=str, default=DATA_DIR, required=False, help='Path to the data')
+parser.add_argument('--pad', default=os.getcwd(), required=False, help='PAD directory')
+parser.add_argument('--hdump_name', default=HDUMP_NAME, required=False, help='hitdumper file name')
+parser.add_argument('--sm_name', default=SM_NAME, required=False, help='pmt software metrics file name')
+parser.add_argument('--wfm_name', default=WFM_NAME, required=False, help='waveform file name')
+parser.add_argument('--load_muon',type=bool, default=False, required=False, help='load muon info')
+parser.add_argument('--load_crt',type=bool, default=False, required=False, help='load crt info')
+parser.add_argument('--mode',type=str, default='op', help='Optical detector mode')
+
+# Parse the arguments
+args = parser.parse_args()
+
+# Use the arguments
+l = Loader(
+    data_dir=args.data,
+    pad_dir=args.pad,
+    hdump_name=args.hdump_name, #Set in config or parsers
+    software_name=args.sm_name, #Set in config or parsers
+    wfm_name=args.wfm_name, #Set in config or parsers
+    load_muon=args.load_muon,
+    load_crt=args.load_crt,
+    mode=args.mode,
+    hdrkeys=HDRKEYS #Set in config
+)
+
 #Initialize
 #l = Loader(DATA_DIR,PAD_DIR,hdump_name=HDUMP_NAME,wfm_name=WFM_NAME) #Loader class with PMT, muon, CRT info
 #l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,WFM_NAME,load_muon=True) #Loader class with PMT, muon, CRT info
-l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,SM_NAME,WFM_NAME,mode='prompt')
+#l = Loader(DATA_DIR,PAD_DIR,HDUMP_NAME,SM_NAME,WFM_NAME,mode='prompt')
 
 #Initialize display
 run_list = l.run_list #Get list of run,subrun,evt
@@ -130,8 +161,11 @@ app.layout = html.Div(style={'display':'flex'},children=[
         html.H1('Info - '),
         html.H3(f'Mode : {l.mode}'),
         html.H3(f'Coatings : {[c-1 for c in COATINGS]}'),
-        html.H3(f'Current event : '),
-        html.H5(f'    Run: {l.run}, Subrun {l.subrun}, Event {l.event}'),
+        html.H3(f'Load muons : {l.load_muon}'),
+        html.H3(f'Load CRT : {l.load_crt}'),
+        #Not supported yet
+        #html.H3(f'Current event : '),
+        #html.H5(f'    Run: {l.run}, Subrun {l.subrun}, Event {l.event}'),
         html.H2('Available Runs'),
         html.Ul(children=[
             html.Li(f'Run: {run}, Subrun: {subrun}, Event: {event}') for run, subrun, event in run_list

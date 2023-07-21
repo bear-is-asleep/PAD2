@@ -5,9 +5,6 @@ from variables import *
 import numpy as np
 from time import time
 
-#Your config import
-from config.fullop import *
-
 class PMT:
     def __init__(self, id, coating, tpc, location, waveform=None, op_pe=None, t1=t1, t0=t0, dt=dt):
         self.id = id

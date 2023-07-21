@@ -8,12 +8,9 @@ import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members
 import os
 
-#Your config import
-from config.software_pe import *
-
 class Loader:
     def __init__(self,data_dir,pad_dir=None,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
-                 load_crt=False,save_dir=None,mode='op'):
+                 load_crt=False,save_dir=None,mode='op',hdrkeys=['run','subrun','event']):
         """Loads and stores trees
 
         Args:
@@ -27,6 +24,7 @@ class Loader:
             save_dir (_type_, optional): _description_. Defaults to None.
             mode (str, optional): Use full optical reconstruction set to prelim for prelimPE from software trigger
                                     and set to prompt to view prompt PE
+            hdrkeys (list,optional): Keys denoting the event id
         """
         if VERBOSE: print('*'*60)
         
@@ -40,6 +38,8 @@ class Loader:
         self.software_name = software_name
         self.mode = mode
         self.load_muon = load_muon
+        self.load_crt = load_crt
+        self.hdrkeys = hdrkeys
         
         #PMT/XA info
         s0 = time()
@@ -92,16 +92,16 @@ class Loader:
             tree = uproot.open(f'{data_dir}/{self.hdump_name}:hitdumper;1/hitdumpertree;1')
         s1 = time()
         if VERBOSE: print(f'Load commissioning tree : {s1-s0:.2f} s')
-        self.run_list = tree.arrays(HDRKEYS,library='pd').values
+        self.run_list = tree.arrays(self.hdrkeys,library='pd').values
         
         #Op info
         s0 = time()
         opkeys = [key for key in tree.keys() if 'op' == key[:2]]
         pmtsoftkeys = [key for key in tree.keys() if 'ch_' in key]
         if mode == 'op':
-            self.op_df = tree.arrays(HDRKEYS+opkeys,library='pd')
+            self.op_df = tree.arrays(self.hdrkeys+opkeys,library='pd')
         elif mode == 'prompt' or mode == 'prelim':
-            self.op_df = tree.arrays(HDRKEYS+pmtsoftkeys,library='pd')
+            self.op_df = tree.arrays(self.hdrkeys+pmtsoftkeys,library='pd')
             #Temp fix for uproot not being able to read in values
             exploded_columns = []
             for column in self.op_df.columns:
@@ -127,7 +127,7 @@ class Loader:
         muonkeys = [key for key in tree.keys() if 'muon' in key]
         if load_muon:
             s0 = time()
-            self.muon_df = tree.arrays(HDRKEYS+muonkeys,library='pd')
+            self.muon_df = tree.arrays(self.hdrkeys+muonkeys,library='pd')
             s1 = time()
             if VERBOSE: print(f'Load muon tracks : {s1-s0:.2f} s')
         else: 
@@ -143,9 +143,9 @@ class Loader:
         if VERBOSE: print('*'*60)
     def get_event(self,run,subrun,event):
         if [run,subrun,event] not in self.run_list:
-            if VERBOSE: print(f'{HDRKEYS[0]} {run} {HDRKEYS[1]} {subrun} {HDRKEYS[2]} {event} not in file {self.data_dir}/{self.hdump_name}')
+            if VERBOSE: print(f'{self.hdrkeys[0]} {run} {self.hdrkeys[1]} {subrun} {self.hdrkeys[2]} {event} not in file {self.data_dir}/{self.hdump_name}')
             return None
-        query_event = f'{HDRKEYS[0]} == {run} and {HDRKEYS[1]} == {subrun} and {HDRKEYS[2]} == {event}'
+        query_event = f'{self.hdrkeys[0]} == {run} and {self.hdrkeys[1]} == {subrun} and {self.hdrkeys[2]} == {event}'
         self.op_evt = self.op_df.query(query_event)
         if self.muon_df is not None:
             self.muon_evt = self.muon_df.query(query_event)

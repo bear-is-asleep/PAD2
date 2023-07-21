@@ -1,9 +1,7 @@
 import plotly.graph_objects as go
 import numpy as np
 from utils.plotters import map_value_to_color
-
-#Your config import
-from config.fullop import *
+from variables import *
 
 class Muon:
     def __init__(self, trk_type, tpc, x1, y1, z1, x2, y2, z2, theta_xz, theta_yz):
