@@ -61,10 +61,32 @@ To set it up just requires setting up the enviroment again
 `source setup.sh`
 
 ### Run
-`Loader` drives PAD and sets up all of the products to include. Set this line `from config.test2 import *` to point to you configuration file, which should be formatted like this
+`Loader` drives PAD and sets up all of the products to include. You can find out more about the parameters of the loader by running `python run_pad.py --help`
 
 ```
-#test2.py example
+usage: run_pad.py [-h] [--data DATA] [--pad PAD] [--hdump_name HDUMP_NAME] [--sm_name SM_NAME] [--wfm_name WFM_NAME] [--load_muon LOAD_MUON] [--load_crt LOAD_CRT] [--mode MODE]
+
+Load data
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --data DATA           Path to the data
+  --pad PAD             PAD directory
+  --hdump_name HDUMP_NAME
+                        hitdumper file name
+  --sm_name SM_NAME     pmt software metrics file name
+  --wfm_name WFM_NAME   waveform file name
+  --load_muon LOAD_MUON
+                        load muon info
+  --load_crt LOAD_CRT   load crt info
+  --mode MODE           Optical detector mode
+```
+
+
+Alternatively you can set the filenames using a config. Set this line `from config.default import *` to point to you configuration file, which should be formatted like this
+
+```
+#default.py example
 
 #Setup for PMT timing
 t0 = -1600 #Start time for PE range [ns]
@@ -79,29 +101,35 @@ PAD_DIR  = '/sbnd/app/users/brindenc/PAD' #Your local PAD dir
 #Get fnames
 HDUMP_NAME = 'hitdumper_tree.root'
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
+SM_NAME = None
 
 #Settings
 VERBOSE = True
+
+#Hdr keys
+HDRKEYS = ['run','subrun','event']
+
+#Coatings
+COATINGS = [0,1,2,3,4] #All PDS components
 ```
 
-In the terminal at the base of your PAD directory type `python run_pad.py`. Dask will show a link to the event display like this
+In the terminal at the base of your PAD directory type `python run_pad.py <--options>`. Dask will show a link to the event display like this
 
 ```
-************************************************************
-Load PMT/XA channel info : 0.02 s
-Load commissioning tree : 0.11 s
-Load op info : 1.89 s
-Load waveforms : 0.00 s
-Load muon tracks : 0.03 s
-************************************************************
-Get PDS objs : 5.18 s
-Get PDS objs : 5.03 s
-Muon 0 TPC1: (202.05,78.72,104.85) to (0.00,138.82,171.75)
 Dash is running on http://127.0.0.1:8050/
+
+ * Serving Flask app 'run_pad'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:8050
+Press CTRL+C to quit
+127.0.0.1 - - [21/Jul/2023 13:03:04] "GET / HTTP/1.1" 200 -
 ```
-Following this link will take you to the PAD display.
-![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD.png)
-**Zoomed out view of PAD**
+
+Opening `http://127.0.0.1:8050` in a browser will take you to the PAD display.
+
+![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD2.png)
+
 ### Actions
 Time sliders change the range to integrate the PE for each PDS component
 * Moving the t0 slider will change the initial time for both TPCs
@@ -110,8 +138,8 @@ Time sliders change the range to integrate the PE for each PDS component
 
 A list of available runs are on the right
 * Entering the run, subrun, event of an event from the list on the right and clicking submit will update PAD to that readout
-* ⚠️ **Repeatedly clicking submit will overload the update command and cause the update to take a lot longer**
 * Takes about 10 s to update
+⚠️ **Repeatedly clicking submit will overload the update command and cause the update to take a lot longer**
 
 The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA waveforms are not included*)
 * Clicking on a PDS shows its waveform
