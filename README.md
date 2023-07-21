@@ -119,6 +119,7 @@ The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA
 
 
 ## To-do 
+* Display run, subrun, event after it's loaded/include loading bar
 * Add option to filter out PDS by coating - supported but not an option in dash window
 * Get official channel mapping (current one stored in `PMT_ARAPUCA_info.pkl`)
 * Get X-ARAPUCA waveform information
