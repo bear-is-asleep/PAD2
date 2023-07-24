@@ -121,6 +121,11 @@ HDRKEYS = ['run','subrun','event']
 
 #Coatings
 COATINGS = [0,1,2,3,4] #All PDS components
+
+#Bools
+LOAD_MUON = True
+LOAD_CRT = False
+MODE = 'op'
 ```
 
 In the terminal at the base of your PAD directory type `python run_pad.py <--options>`. Dask will show a link to the event display like this
