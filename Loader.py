@@ -103,12 +103,13 @@ class Loader:
         elif mode == 'prompt' or mode == 'prelim':
             self.op_df = tree.arrays(self.hdrkeys+pmtsoftkeys,library='pd')
             #Temp fix for uproot not being able to read in values
-            exploded_columns = []
-            for column in self.op_df.columns:
-                if 'ch_' in column:
-                    self.op_df[column] = self.op_df[column][0]
-                    exploded_columns.append(column)
-            self.op_df = self.op_df.explode(exploded_columns)
+            # exploded_columns = []
+            # for column in self.op_df.columns:
+            #     if 'ch_' in column:
+            #         print(np.shape(self.op_df[column]))
+            #         self.op_df[column] = self.op_df[column][0][0]
+            #         exploded_columns.append(column)
+            # self.op_df = self.op_df.explode(exploded_columns)
         else:
             raise Exception(f'Invalid mode : {mode}')
         s1 = time()

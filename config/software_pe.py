@@ -23,3 +23,8 @@ HDRKEYS = ['run','sub','evt']
 
 #Coatings
 COATINGS = [1,2] #only PMTs supported
+
+#Bools
+LOAD_MUON = False
+LOAD_CRT = False
+MODE = 'prompt'

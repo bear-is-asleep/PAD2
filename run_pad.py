@@ -19,7 +19,7 @@ global muons_tpc1
 global pds_tpc1
 
 # Create the parser
-parser = argparse.ArgumentParser(description="Load data")
+parser = argparse.ArgumentParser(description="Load data - default values are stored in the config selected")
 
 # Add the arguments
 parser.add_argument('--data', type=str, default=DATA_DIR, required=False, help='Path to the data')
@@ -27,9 +27,9 @@ parser.add_argument('--pad', default=os.getcwd(), required=False, help='PAD dire
 parser.add_argument('--hdump_name', default=HDUMP_NAME, required=False, help='hitdumper file name')
 parser.add_argument('--sm_name', default=SM_NAME, required=False, help='pmt software metrics file name')
 parser.add_argument('--wfm_name', default=WFM_NAME, required=False, help='waveform file name')
-parser.add_argument('--load_muon',type=bool, default=True, required=False, help='load muon info')
-parser.add_argument('--load_crt',type=bool, default=False, required=False, help='load crt info')
-parser.add_argument('--mode',type=str, default='op', help='Optical detector mode')
+parser.add_argument('--load_muon',type=bool, default=LOAD_MUON, required=False, help='load muon info')
+parser.add_argument('--load_crt',type=bool, default=LOAD_CRT, required=False, help='load crt info')
+parser.add_argument('--mode',type=str, default=MODE, help='Optical detector mode')
 
 # Parse the arguments
 args = parser.parse_args()
