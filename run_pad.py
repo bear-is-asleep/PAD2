@@ -11,7 +11,7 @@ import argparse
 import os
 
 #Your config - you can also pass arguments
-from config.default import *
+from config.pds_ml import *
 
 global muons_tpc0
 global pds_tpc0
@@ -29,6 +29,7 @@ parser.add_argument('--sm_name', default=SM_NAME, required=False, help='pmt soft
 parser.add_argument('--wfm_name', default=WFM_NAME, required=False, help='waveform file name')
 parser.add_argument('--load_muon',type=bool, default=LOAD_MUON, required=False, help='load muon info')
 parser.add_argument('--load_crt',type=bool, default=LOAD_CRT, required=False, help='load crt info')
+parser.add_argument('--load_mcpart',type=bool, default=LOAD_MCPART, required=False, help='load mcpart info')
 parser.add_argument('--mode',type=str, default=MODE, help='Optical detector mode')
 
 # Parse the arguments
@@ -43,6 +44,7 @@ l = Loader(
     wfm_name=args.wfm_name, #Set in config or parsers
     load_muon=args.load_muon,
     load_crt=args.load_crt,
+    load_mcpart=args.load_mcpart,
     mode=args.mode,
     hdrkeys=HDRKEYS #Set in config
 )
@@ -77,6 +79,11 @@ else:
     muon_lines_tpc0 = [go.Scatter()]
     muon_lines_tpc1 = [go.Scatter()]
 
+if l.load_mcpart:
+    mcparts = l.get_mcpart_list()
+    mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+else:
+    mcparts_lines = [go.Scatter()]
 
 #Start dash
 app = dash.Dash(__name__)
@@ -120,7 +127,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
             dcc.Graph(
                 id='tpc0',
                 figure=go.Figure(
-                    data=pds_coordinates_tpc0+muon_lines_tpc0,
+                    data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines,
                     layout=go.Layout(
                         autosize=False,
                         width=1000,
@@ -140,7 +147,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
             dcc.Graph(
                 id='tpc1',
                 figure=go.Figure(
-                    data=pds_coordinates_tpc1+muon_lines_tpc1,
+                    data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines,
                     layout=go.Layout(
                         autosize=False,
                         width=1000,
@@ -163,6 +170,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
         html.H3(f'Coatings : {[c-1 for c in COATINGS]}'),
         html.H3(f'Load muons : {l.load_muon}'),
         html.H3(f'Load CRT : {l.load_crt}'),
+        html.H3(f'Load MCParts : {l.load_mcpart}'),
         #Not supported yet
         #html.H3(f'Current event : '),
         #html.H5(f'    Run: {l.run}, Subrun {l.subrun}, Event {l.event}'),
@@ -190,7 +198,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
     global muons_tpc0
     global pds_tpc0  
     global muons_tpc1
-    global pds_tpc1   
+    global pds_tpc1 
     ctx = dash.callback_context
     if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks':  # Check if the button triggered the callback
         if [run,subrun,event] in l.run_list:
@@ -237,7 +245,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
     s1 = time()
     if VERBOSE: print(f'Get new muon trajectories : {s1-s0:.2f} s')
 
-    return [go.Figure(data=pds_coordinates_tpc0+muon_lines_tpc0,
+    return [go.Figure(data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines,
                      layout=go.Layout(
                          autosize=False,
                          width=1000,
@@ -246,7 +254,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
                          xaxis=dict(range=[0, 500]),  # Set x-axis limits
                          yaxis=dict(range=[-200, 200])   # Set y-axis limits
                      )),
-            go.Figure(data=pds_coordinates_tpc1+muon_lines_tpc1,
+            go.Figure(data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines,
                      layout=go.Layout(
                          autosize=False,
                          width=1000,
@@ -323,4 +331,4 @@ def update_waveform_graph(click_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)

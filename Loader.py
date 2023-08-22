@@ -3,6 +3,7 @@ import pandas as pd
 from variables import *
 from PMT import PMT
 from Muon import Muon
+from MCPart import MCPart
 from time import time
 import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members
@@ -10,7 +11,7 @@ import os
 
 class Loader:
     def __init__(self,data_dir,pad_dir=None,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
-                 load_crt=False,save_dir=None,mode='op',hdrkeys=['run','subrun','event']):
+                 load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event']):
         """Loads and stores trees
 
         Args:
@@ -21,7 +22,7 @@ class Loader:
             wfm_name (_type_, optional): _description_. Defaults to None.
             load_crt (bool, optional): Load CRT info from hitdumper. Defaults to False.
             load_muon (bool, optional): Load muon info from hitdumper. Defaults to False.
-            save_dir (_type_, optional): _description_. Defaults to None.
+            load_mcpart (bool, optional): Load mcpart info from hitdumper. Defaults to False.
             mode (str, optional): Use full optical reconstruction set to prelim for prelimPE from software trigger
                                     and set to prompt to view prompt PE
             hdrkeys (list,optional): Keys denoting the event id
@@ -39,6 +40,7 @@ class Loader:
         self.mode = mode
         self.load_muon = load_muon
         self.load_crt = load_crt
+        self.load_mcpart = load_mcpart
         self.hdrkeys = hdrkeys
         
         #PMT/XA info
@@ -136,6 +138,26 @@ class Loader:
         #CRT info - optional
         self.crt_df = None
         
+        #MCPart info
+        if load_mcpart:
+            part_keys = [key for key in tree.keys() if 'mcpart_' in key]
+            parts = tree.arrays(self.hdrkeys+part_keys,library='pd')
+
+            shower_keys = [key for key in tree.keys() if 'mcshower_' in key]
+            showers = tree.arrays(shower_keys,library='pd')
+
+            track_keys = [key for key in tree.keys() if 'mctrack_' in key]
+            tracks = tree.arrays(track_keys,library='pd')
+            
+            #Valid particles filter
+            valid_tracks = tracks.mctrack_TrackId.values
+            valid_showers = showers.mcshower_TrackId.values
+            valid_parts = np.append(valid_showers,valid_tracks)
+            self.mcpart_df = parts[parts['mcpart_TrackId'].isin(valid_parts)]
+            
+        else:
+            self.mcpart_df = None
+        
         #Set dummy values
         self.op_evt = None
         self.muon_evt = None
@@ -150,6 +172,8 @@ class Loader:
         self.op_evt = self.op_df.query(query_event)
         if self.muon_df is not None:
             self.muon_evt = self.muon_df.query(query_event)
+        if self.mcpart_df is not None:
+            self.mcpart_evt = self.mcpart_df.query(query_event)
         self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
         self.run = run
         self.subrun = subrun
@@ -242,6 +266,27 @@ class Loader:
            if trk_type in types and tpc == tpcs[i]:
                muons.append(Muon(trk_types[i], tpcs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], theta_xzs[i], theta_yzs[i]))
         return muons
+    def get_mcpart_list(self,keep_pdgs=None):
+        
+        mcparts = []
+        #Extract info into arrays
+        pdgs, engs, pxs, pys, pzs, x1s, y1s, z1s, x2s, y2s, z2s = (
+            self.mcpart_evt.mcpart_pdg.values,
+            self.mcpart_evt.mcpart_Eng.values,
+            self.mcpart_evt.mcpart_Px.values,
+            self.mcpart_evt.mcpart_Py.values,
+            self.mcpart_evt.mcpart_Pz.values,
+            self.mcpart_evt.mcpart_StartPointx.values,
+            self.mcpart_evt.mcpart_StartPointy.values,
+            self.mcpart_evt.mcpart_StartPointz.values,
+            self.mcpart_evt.mcpart_EndPointx.values,
+            self.mcpart_evt.mcpart_EndPointy.values,
+            self.mcpart_evt.mcpart_EndPointz.values,
+        )
+        if keep_pdgs is None:
+            for i in range(len(pdgs)):
+                mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i]))
+        return mcparts
     def get_crt_list(self):
         pass
             

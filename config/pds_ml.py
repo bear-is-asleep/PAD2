@@ -1,12 +1,12 @@
 #default.py example
 
 #Setup for PMT timing
-t0 = -1600 #Start time for PE range [ns]
-t1 = 1600 #End time for PE range [ns]
-dt = 2 #Step size [ns]
+# t0 = -2 #Start time for PE range [ns]
+# t1 = 20 #End time for PE range [ns]
+# dt = 2 #Step size [ns]
 
 #Get directories
-DATA_DIR = '/sbnd/data/users/brindenc/PAD/test_fcl/v1' #Waveforms and hitdumper location
+DATA_DIR = '/sbnd/data/users/brindenc/PDS_ml/test_fcl/v1' #Waveforms and hitdumper location
 SAVE_DIR = '/sbnd/data/users/brindenc/PAD/figures' 
 PAD_DIR  = '/sbnd/app/users/brindenc/PAD' #Your local PAD dir
 
@@ -27,5 +27,5 @@ COATINGS = [0,1,2,3,4] #All PDS components
 #Bools
 LOAD_MUON = False
 LOAD_CRT = False
-LOAD_MCPART = False
+LOAD_MCPART = True
 MODE = 'op'

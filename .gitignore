@@ -7,3 +7,4 @@ env
 nb/.ipynb_checkpoints
 nb/plots*
 Plots/
+config/default.py
