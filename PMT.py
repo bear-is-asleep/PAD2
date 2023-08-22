@@ -47,7 +47,7 @@ class PMT:
         if self.op_pe is not None:
             s0 = time()
             start_ind = np.searchsorted(self.bins,start) 
-            end_ind = np.searchsorted(self.bins,end)  -1
+            end_ind = np.searchsorted(self.bins,end)
             if start_ind < end_ind:
                 mask = np.full(len(self.op_pe),False)
                 inds = list(range(start_ind,end_ind))
