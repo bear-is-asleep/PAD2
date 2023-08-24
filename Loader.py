@@ -143,17 +143,22 @@ class Loader:
             part_keys = [key for key in tree.keys() if 'mcpart_' in key]
             parts = tree.arrays(self.hdrkeys+part_keys,library='pd')
 
-            shower_keys = [key for key in tree.keys() if 'mcshower_' in key]
-            showers = tree.arrays(shower_keys,library='pd')
-
-            track_keys = [key for key in tree.keys() if 'mctrack_' in key]
-            tracks = tree.arrays(track_keys,library='pd')
+            #Correct columns with strings
+            processes = tree.arrays(['mcpart_process'],library='np')
+            endprocesses = tree.arrays(['mcpart_endprocess'],library='np')
             
-            #Valid particles filter
-            valid_tracks = tracks.mctrack_TrackId.values
-            valid_showers = showers.mcshower_TrackId.values
-            valid_parts = np.append(valid_showers,valid_tracks)
-            self.mcpart_df = parts[parts['mcpart_TrackId'].isin(valid_parts)]
+            mcpart_processes = []
+            mcpart_endprocesses = []
+            for p in processes['mcpart_process']:
+                mcpart_processes += p
+            for p in endprocesses['mcpart_endprocess']:
+                mcpart_endprocesses += p
+
+            parts['mcpart_process'] = mcpart_processes
+            parts['mcpart_endprocess'] = mcpart_endprocesses
+            
+            #Filter by primary
+            self.mcpart_df = parts.query('mcpart_process == "primary"')
             
         else:
             self.mcpart_df = None
@@ -226,7 +231,7 @@ class Loader:
             s2 = time()
             if self.mode == 'op':
                 op_df = self.op_evt[self.op_evt.ophit_opch == i]
-                op_times = op_df.ophit_peakT.values
+                op_times = op_df.ophit_peakT.values*1e3 #Convert to ns
                 op_pes = op_df.ophit_pe.values
             elif self.mode == 'prompt' or self.mode == 'prelim':
                 op_df = self.op_evt[self.op_evt.ch_ID == i]
@@ -270,7 +275,7 @@ class Loader:
         
         mcparts = []
         #Extract info into arrays
-        pdgs, engs, pxs, pys, pzs, x1s, y1s, z1s, x2s, y2s, z2s = (
+        pdgs, engs, pxs, pys, pzs, x1s, y1s, z1s, x2s, y2s, z2s, processes, endprocesses = (
             self.mcpart_evt.mcpart_pdg.values,
             self.mcpart_evt.mcpart_Eng.values,
             self.mcpart_evt.mcpart_Px.values,
@@ -282,13 +287,18 @@ class Loader:
             self.mcpart_evt.mcpart_EndPointx.values,
             self.mcpart_evt.mcpart_EndPointy.values,
             self.mcpart_evt.mcpart_EndPointz.values,
+            self.mcpart_evt.mcpart_process.values,
+            self.mcpart_evt.mcpart_endprocess.values,
         )
         if keep_pdgs is None:
             for i in range(len(pdgs)):
-                mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i]))
+                mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], processes[i], endprocesses[i]))
         return mcparts
     def get_crt_list(self):
         pass
+    def get_pe_centroid(self,coating=0):
+        pass
+        
             
             
 

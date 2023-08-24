@@ -1,12 +1,10 @@
 #default.py example
 
-#Setup for PMT timing
-# t0 = -2 #Start time for PE range [ns]
-# t1 = 20 #End time for PE range [ns]
-# dt = 2 #Step size [ns]
+#PAD settings
+CMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 
 #Get directories
-DATA_DIR = '/sbnd/data/users/brindenc/PDS_ml/test_fcl/v1' #Waveforms and hitdumper location
+DATA_DIR = '/sbnd/data/users/brindenc/PDS_ml/test_fcl/pgun/neutron' #Waveforms and hitdumper location
 SAVE_DIR = '/sbnd/data/users/brindenc/PAD/figures' 
 PAD_DIR  = '/sbnd/app/users/brindenc/PAD' #Your local PAD dir
 

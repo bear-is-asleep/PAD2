@@ -23,7 +23,33 @@ class PMT:
             self.op_pe = None
             self.bins = None
 
-    def plot_coordinates(self, start, end, cmap='magma', cmin=0, cmax=2000):
+    def get_pe_start_stop(self,start,end):
+        """
+        Get pe within start and stop times for bins
+
+        Args:
+            op_pe (pandas dataframe): contains two columns, 'time_bin' which are pd intervals, and op_pe which contain the pe for that time bin.
+            bins (numpy array): time bins aranged in even intervals
+            start (number): start time
+            end (number): end time
+
+        Returns:
+            _type_: _description_
+        """
+        start_ind = np.searchsorted(self.bins,start) 
+        end_ind = np.searchsorted(self.bins,end)
+        if start_ind < end_ind:
+            mask = np.full(len(self.op_pe),False)
+            inds = list(range(start_ind,end_ind))
+            mask[inds] = True
+            color = self.op_pe.loc[mask, 'op_pe'].sum()
+        else:
+            color = 0
+        if np.isnan(color):
+            color = 0
+        return color
+
+    def plot_coordinates(self, start, end, cmap='magma', cmin=0, cmax=None):
         """ 
         Plots PMTs onto PAD grid
 
@@ -32,7 +58,7 @@ class PMT:
             end (_type_): end time window
             cmap (str, optional): Defaults to 'magma'.
             cmin (int, optional): Defaults to 0.
-            cmax (int, optional): Defaults to 10000.
+            cmax (int, optional): Defaults to None.
 
         Returns:
             go.Scatter: scatter point to be plotted on dash canvas
@@ -44,21 +70,7 @@ class PMT:
             showscale = True
         else:
             showscale = False
-        if self.op_pe is not None:
-            s0 = time()
-            start_ind = np.searchsorted(self.bins,start) 
-            end_ind = np.searchsorted(self.bins,end)
-            if start_ind < end_ind:
-                mask = np.full(len(self.op_pe),False)
-                inds = list(range(start_ind,end_ind))
-                mask[inds] = True
-                color = self.op_pe.loc[mask, 'op_pe'].sum()
-            else:
-                color = 0
-            if np.isnan(color):
-                color = 0
-        else:
-            color = 0
+        color = self.get_pe_start_stop(start, end)
         s1 = time()
         #if VERBOSE: print(f'-- time to bin {s1-s0:.3f} s')
         msize = 18

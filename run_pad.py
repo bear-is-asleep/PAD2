@@ -64,7 +64,13 @@ l.get_event(run,subrun,event)
 #PDS init
 pds_tpc0 = l.get_pmt_list(tpc=0,coatings=COATINGS) #Get list of pmts
 pds_tpc1 = l.get_pmt_list(tpc=1,coatings=COATINGS) #Get list of pmts
-cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+if CMAX == 'global':
+    cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+elif CMAX == 'dynamic':
+    cmax = np.max([pds.get_pe_start_stop(start_bin,end_bin) for pds in pds_tpc0+pds_tpc1])
+else:
+    if VERBOSE: print(f'{CMAX} is not a valid setting for setting pe color')
+    cmax = None
 cmin = 0
 pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
 pds_coordinates_tpc1 = [pds.plot_coordinates(start_bin,end_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc1]
@@ -134,7 +140,8 @@ app.layout = html.Div(style={'display':'flex'},children=[
                         height=800,
                         showlegend=False,
                         xaxis=dict(range=[0, 500]),  # Set x-axis limits
-                        yaxis=dict(range=[-200, 200])   # Set y-axis limits
+                        yaxis=dict(range=[-200, 200]),   # Set y-axis limits
+                        coloraxis=dict(cmax=cmax)
                     ))
             ),
             dcc.Graph(
@@ -154,7 +161,8 @@ app.layout = html.Div(style={'display':'flex'},children=[
                         height=800,
                         showlegend=False,
                         xaxis=dict(range=[0, 500]),  # Set x-axis limits
-                        yaxis=dict(range=[-200, 200])   # Set y-axis limits
+                        yaxis=dict(range=[-200, 200]),   # Set y-axis limits
+                        coloraxis=dict(cmax=cmax)
                     ))
             ),
             dcc.Graph(
@@ -216,6 +224,11 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
             else:
                 muon_lines_tpc0 = [go.Scatter()]
                 muon_lines_tpc1 = [go.Scatter()]
+            if l.load_mcpart:
+                mcparts = l.get_mcpart_list()
+                mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+            else:
+                mcparts_lines = [go.Scatter()]
         else:
             print(f'Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
@@ -226,7 +239,13 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
     #PDS
     #if VERBOSE: print('Update time window')
     s0 = time()
-    cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+    if CMAX == 'global':
+        cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+    elif CMAX == 'dynamic':
+        cmax = np.max([pds.get_pe_start_stop(start_time_bin,end_time_bin) for pds in pds_tpc0+pds_tpc1])
+    else:
+        if VERBOSE: print(f'{CMAX} is not a valid setting for setting pe color')
+        cmax = None
     cmin = 0
     pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
     pds_coordinates_tpc1 = [pds.plot_coordinates(start_time_bin,end_time_bin,cmin=cmin,cmax=cmax) for pds in pds_tpc1]
@@ -244,15 +263,23 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
         muon_lines_tpc1 = [go.Scatter()]
     s1 = time()
     if VERBOSE: print(f'Get new muon trajectories : {s1-s0:.2f} s')
+    if l.load_mcpart:
+        mcparts = l.get_mcpart_list()
+        mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+    else:
+        mcparts_lines = [go.Scatter()]
+    s2 = time()
+    if VERBOSE: print(f'Get new mcpart trajectories : {s2-s1:.2f} s')
 
     return [go.Figure(data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines,
-                     layout=go.Layout(
+                      layout=go.Layout(
                          autosize=False,
                          width=1000,
                          height=800,
                          showlegend=False,
                          xaxis=dict(range=[0, 500]),  # Set x-axis limits
-                         yaxis=dict(range=[-200, 200])   # Set y-axis limits
+                         yaxis=dict(range=[-200, 200]),   # Set y-axis limits
+                         coloraxis=dict(cmax=cmax)
                      )),
             go.Figure(data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines,
                      layout=go.Layout(
@@ -261,7 +288,8 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,run, subrun, event):
                          height=800,
                          showlegend=False,
                          xaxis=dict(range=[0, 500]),  # Set x-axis limits
-                         yaxis=dict(range=[-200, 200])   # Set y-axis limits
+                         yaxis=dict(range=[-200, 200]),   # Set y-axis limits
+                         coloraxis=dict(cmax=cmax)
                      ))]
 
 
@@ -331,4 +359,4 @@ def update_waveform_graph(click_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
