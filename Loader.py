@@ -236,7 +236,7 @@ class Loader:
             elif self.mode == 'prompt' or self.mode == 'prelim':
                 op_df = self.op_evt[self.op_evt.ch_ID == i]
                 op_pes = op_df.loc[:,f'ch_{self.mode}PE'].values
-                op_times = [0]
+                op_times = [t0]
             pds_op_pe = {'op_time': op_times, 'op_pe': op_pes}
             s3 = time()
             #if VERBOSE: print(f'-- get op time {s3-s2:.3f} s')

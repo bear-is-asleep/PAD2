@@ -77,7 +77,7 @@ class PMT:
         hex_color = map_value_to_color(color,cmin,cmax,cmap=cmap)
         text = f'ID : {self.id:.0f}'
         text += '<br>'
-        text += f'Coating : {self.coating:.2f}'
+        text += f'Coating : {self.coating:.0f}'
         text += '<br>'
         text += f'Cum. PE : {color:.2f}'
         # print('color : ',color)

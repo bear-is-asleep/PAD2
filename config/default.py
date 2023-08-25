@@ -10,8 +10,8 @@ PAD_DIR  = '/sbnd/app/users/brindenc/PAD' #Your local PAD dir
 
 #Get fnames
 HDUMP_NAME = 'hitdumper_tree.root'
-WFM_NAME = None #WFM_NAME = None if you did not make waveforms
-SM_NAME = None
+WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
+SM_NAME = 'test_hist.root'
 
 #Settings
 VERBOSE = True
@@ -23,7 +23,7 @@ HDRKEYS = ['run','subrun','event']
 COATINGS = [0,1,2,3,4] #All PDS components
 
 #Bools
-LOAD_MUON = False
+LOAD_MUON = True
 LOAD_CRT = False
-LOAD_MCPART = False
+LOAD_MCPART = True
 MODE = 'op'

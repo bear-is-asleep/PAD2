@@ -54,7 +54,8 @@ class Muon:
             text = text,
             hoverinfo = 'text+name',
             line = dict(
-              color=color
+              color=color,
+              dash='dash'
             )
         )
         
