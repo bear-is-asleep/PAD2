@@ -11,7 +11,7 @@ import argparse
 import os
 
 #Your config - you can also pass arguments
-from config.pds_ml import *
+from config.default import *
 
 global muons_tpc0
 global pds_tpc0
