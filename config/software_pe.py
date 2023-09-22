@@ -1,9 +1,7 @@
-#test2.py example
+#software photoelectron example with waveforms
 
-#Setup for PMT timing
-t0 = -1600 #Start time for PE range [ns]
-t1 = 1600 #End time for PE range [ns]
-dt = 2 #Step size [ns]
+#PAD settings
+CMAX = 'global' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 
 #Get directories
 DATA_DIR = '/sbnd/data/users/ipatel/NC_trigger/test_fcl/v1' #Waveforms and hitdumper location
@@ -27,4 +25,5 @@ COATINGS = [1,2] #only PMTs supported
 #Bools
 LOAD_MUON = False
 LOAD_CRT = False
+LOAD_MCPART = False
 MODE = 'prompt'

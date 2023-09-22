@@ -4,7 +4,7 @@ from utils.plotters import map_value_to_color
 from variables import *
 
 class MCPart:
-    def __init__(self, pdg, eng, px, py, pz, x1, y1, z1, x2, y2, z2):
+    def __init__(self, pdg, eng, px, py, pz, x1, y1, z1, x2, y2, z2, process, endprocess):
         self.pdg = pdg
         self.eng = eng
         self.px = px
@@ -16,6 +16,8 @@ class MCPart:
         self.x2 = x2
         self.y2 = y2
         self.z2 = z2
+        self.process = process
+        self.endprocess = endprocess
         
     def plot_line(self,ind,max_color=2212):
         # Generate a number of intermediate points along the line
@@ -25,13 +27,13 @@ class MCPart:
 
         text = f'Pdg : {self.pdg}'
         text += '<br>'
-        text += f'E : {self.eng:.2f}'
+        text += f'E : {self.eng:.4f}'
         text += '<br>'
-        text += f'px : {self.px:.2f}'
+        text += f'px : {self.px:.4f}'
         text += '<br>'
-        text += f'py : {self.py:.2f}'
+        text += f'py : {self.py:.4f}'
         text += '<br>'
-        text += f'pz : {self.pz:.2f}'
+        text += f'pz : {self.pz:.4f}'
         text += '<br>'
         text += f'x1 : {self.x1:.2f}'
         text += '<br>'
@@ -44,6 +46,10 @@ class MCPart:
         text += f'y2 : {self.y2:.2f}'
         text += '<br>'
         text += f'z2 : {self.z2:.2f}'
+        text += '<br>'
+        text += f'process : {self.process}'
+        text += '<br>'
+        text += f'end process : {self.endprocess}'
         text += '<br>'
         
         if VERBOSE: print(f'MCPart {ind} : ({self.x1:.2f},{self.y1:.2f},{self.z1:.2f}) to ({self.x2:.2f},{self.y2:.2f},{self.z2:.2f})')
