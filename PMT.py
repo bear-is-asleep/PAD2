@@ -49,13 +49,14 @@ class PMT:
             color = 0
         return color
 
-    def plot_coordinates(self, start, end, cmap='magma', cmin=0, cmax=None):
+    def plot_coordinates(self, start, end, pds_ids,cmap='magma', cmin=0, cmax=None):
         """ 
         Plots PMTs onto PAD grid
 
         Args:
             start (_type_): start time window
             end (_type_): end time window
+            pds_ids (_type_): list of pds ids that are plotted
             cmap (str, optional): Defaults to 'magma'.
             cmin (int, optional): Defaults to 0.
             cmax (int, optional): Defaults to None.
@@ -66,14 +67,14 @@ class PMT:
         #if VERBOSE: print('pds id : ',self.id)
         z = [self.location[2]]
         y = [self.location[1]]
-        if self.id in [6,7]: 
+        if self.id in pds_ids[:2]: #only set colorbar for first two pds ids to avoid duplication 
             showscale = True
         else:
             showscale = False
         color = self.get_pe_start_stop(start, end)
         s1 = time()
         #if VERBOSE: print(f'-- time to bin {s1-s0:.3f} s')
-        msize = 18
+        msize = 14
         hex_color = map_value_to_color(color,cmin,cmax,cmap=cmap)
         text = f'ID : {self.id:.0f}'
         text += '<br>'
