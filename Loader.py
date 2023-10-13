@@ -10,13 +10,12 @@ from utils.helpers import convert_edges_to_centers,get_common_members
 import os
 
 class Loader:
-    def __init__(self,data_dir,pad_dir=None,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
+    def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
                  load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event']):
         """Loads and stores trees
 
         Args:
             data_dir (_type_): _description_
-            pad_dir (_type_): _description_
             hdump_name (_type_): _description_
             software_name (str): Name of software metrics tree
             wfm_name (_type_, optional): _description_. Defaults to None.
@@ -31,10 +30,6 @@ class Loader:
         
         #Other vars
         self.data_dir = data_dir
-        if pad_dir is None:
-            self.pad_dir = os.getcwd()
-        else:
-            self.pad_dir = pad_dir
         self.hdump_name = hdump_name
         self.software_name = software_name
         self.mode = mode
@@ -45,7 +40,7 @@ class Loader:
         
         #PMT/XA info
         s0 = time()
-        self.pmt_arapuca_info = pd.read_pickle(f'{pad_dir}/PMT_ARAPUCA_info.pkl')
+        self.pmt_arapuca_info = pd.read_pickle(f'PMT_ARAPUCA_info.pkl')
         self.pmt_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 0 or ophit_opdet_type == 1').index)
         self.xa_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 2 or ophit_opdet_type == 3').index)
         self.pds_ids = list(self.pmt_arapuca_info.index)
