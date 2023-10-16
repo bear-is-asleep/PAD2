@@ -54,6 +54,9 @@ Next make sure you set `SaveHists: true` in the [pmt software trigger producer f
 #### Muon tracks - optional
 The commissioning muon tracks are not turned on by default, but are optional for pad. If you want them in hitdumper set this line to true `readMuonTracks: true` and this line to true `readMuonHits: true`.
 
+#### G4 primaries - optional
+If you want these from hitdumper set `readMCParticle: true` 
+
 Now that the fcl is prepared you can run 
 
 `lar -c run_hitdumper.fcl -s [DetSim or PMT software trigger root file]`
@@ -74,9 +77,10 @@ To set it up just requires setting up the enviroment again
 `Loader` drives PAD and sets up all of the products to include. You can find out more about the parameters of the loader by running `python run_pad.py --help`
 
 ```
-usage: run_pad.py [-h] [--data DATA] [--pad PAD] [--hdump_name HDUMP_NAME] [--sm_name SM_NAME] [--wfm_name WFM_NAME] [--load_muon LOAD_MUON] [--load_crt LOAD_CRT] [--mode MODE]
+usage: run_pad.py [-h] [--data DATA] [--pad PAD] [--hdump_name HDUMP_NAME] [--sm_name SM_NAME] [--wfm_name WFM_NAME] [--load_muon LOAD_MUON] [--load_crt LOAD_CRT] [--load_mcpart LOAD_MCPART]
+                  [--mode MODE]
 
-Load data
+Load data - default values are stored in the config selected
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -89,6 +93,8 @@ optional arguments:
   --load_muon LOAD_MUON
                         load muon info
   --load_crt LOAD_CRT   load crt info
+  --load_mcpart LOAD_MCPART
+                        load mcpart info
   --mode MODE           Optical detector mode
 ```
 
@@ -98,34 +104,24 @@ Alternatively you can set the filenames using a config. Set this line `from conf
 ```
 #default.py example
 
-#Setup for PMT timing
-t0 = -1600 #Start time for PE range [ns]
-t1 = 1600 #End time for PE range [ns]
-dt = 2 #Step size [ns]
-
 #Get directories
 DATA_DIR = '/sbnd/data/users/brindenc/PAD/test_fcl/v1' #Waveforms and hitdumper location
-SAVE_DIR = '/sbnd/data/users/brindenc/PAD/figures' 
-PAD_DIR  = '/sbnd/app/users/brindenc/PAD' #Your local PAD dir
 
 #Get fnames
-HDUMP_NAME = 'hitdumper_tree.root'
+HDUMP_NAME = 'hitdumper_tree.root' #Required
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
-SM_NAME = None
+SM_NAME = 'test_hist.root' #SM_NAME = None if you did not make software metrics
+PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
 
-#Settings
+#PAD settings
+CMAX = 'global' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 VERBOSE = True
-
-#Hdr keys
-HDRKEYS = ['run','subrun','event']
-
-#Coatings
-COATINGS = [0,1,2,3,4] #All PDS components
-
-#Bools
-LOAD_MUON = True
-LOAD_CRT = False
-MODE = 'op'
+HDRKEYS = ['run','subrun','event'] #event id keys
+LOAD_MUON = True #Muon tracks
+LOAD_CRT = False #CRT tracks (not supported yet)
+LOAD_MCPART = True #G4 primary particles
+MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
+COATINGS = [0,1,2,3,4] #all pds
 ```
 
 In the terminal at the base of your PAD directory type `python run_pad.py <--options>`. Dask will show a link to the event display like this
@@ -163,10 +159,6 @@ The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA
 
 
 ## To-do 
-* Display run, subrun, event after it's loaded/include loading bar
-* Add option to filter out PDS by coating - supported but not an option in dash window
 * Get official channel mapping (current one stored in `PMT_ARAPUCA_info.pkl`)
 * Get X-ARAPUCA waveform information
-* Implement truth level information - new class
 * Implement CRT tracks - new class
-* Make PAD prettier - include logo
