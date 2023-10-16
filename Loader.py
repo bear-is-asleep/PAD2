@@ -11,7 +11,7 @@ import os
 
 class Loader:
     def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
-                 load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event']):
+                 load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='PMT_ARAPUCA_info.pkl'):
         """Loads and stores trees
 
         Args:
@@ -25,6 +25,7 @@ class Loader:
             mode (str, optional): Use full optical reconstruction set to prelim for prelimPE from software trigger
                                     and set to prompt to view prompt PE
             hdrkeys (list,optional): Keys denoting the event id
+            pmt_ara_name (str,optional): Name of pkl file containing PMT/XA info
         """
         if VERBOSE: print('*'*60)
         
@@ -32,6 +33,7 @@ class Loader:
         self.data_dir = data_dir
         self.hdump_name = hdump_name
         self.software_name = software_name
+        self.wfm_name = wfm_name
         self.mode = mode
         self.load_muon = load_muon
         self.load_crt = load_crt
@@ -40,7 +42,7 @@ class Loader:
         
         #PMT/XA info
         s0 = time()
-        self.pmt_arapuca_info = pd.read_pickle(f'PMT_ARAPUCA_info.pkl')
+        self.pmt_arapuca_info = pd.read_pickle(pmt_ara_name)
         self.pmt_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 0 or ophit_opdet_type == 1').index)
         self.xa_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 2 or ophit_opdet_type == 3').index)
         self.pds_ids = list(self.pmt_arapuca_info.index)
@@ -99,14 +101,6 @@ class Loader:
             self.op_df = tree.arrays(self.hdrkeys+opkeys,library='pd')
         elif mode == 'prompt' or mode == 'prelim':
             self.op_df = tree.arrays(self.hdrkeys+pmtsoftkeys,library='pd')
-            #Temp fix for uproot not being able to read in values
-            # exploded_columns = []
-            # for column in self.op_df.columns:
-            #     if 'ch_' in column:
-            #         print(np.shape(self.op_df[column]))
-            #         self.op_df[column] = self.op_df[column][0][0]
-            #         exploded_columns.append(column)
-            # self.op_df = self.op_df.explode(exploded_columns)
         else:
             raise Exception(f'Invalid mode : {mode}')
         s1 = time()
@@ -152,6 +146,11 @@ class Loader:
             parts['mcpart_process'] = mcpart_processes
             parts['mcpart_endprocess'] = mcpart_endprocesses
             
+            #Filter by timing - give 1600 ns buffer + 1600ns beam window
+            start_intime = parts.mcpart_StartT > -1600
+            end_intime = parts.mcpart_StartT < 3200
+            parts = parts[start_intime & end_intime]
+            
             #Filter by primary
             self.mcpart_df = parts.query('mcpart_process == "primary"')
             
@@ -174,7 +173,14 @@ class Loader:
             self.muon_evt = self.muon_df.query(query_event)
         if self.mcpart_df is not None:
             self.mcpart_evt = self.mcpart_df.query(query_event)
-        self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
+        if self.wtree is not None:
+            if any([f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}' in k for k in self.wtree.keys()]):
+                self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
+            else: 
+                if VERBOSE: print(f'Warning: waveform for {self.hdrkeys[0]} {run} {self.hdrkeys[1]} {subrun} {self.hdrkeys[2]} {event} not in file {self.data_dir}/{self.wfm_name}')
+                self.waveform_hist_name = None
+        else:
+            self.waveform_hist_name = None    
         self.run = run
         self.subrun = subrun
         self.event = event
@@ -236,7 +242,8 @@ class Loader:
             s3 = time()
             #if VERBOSE: print(f'-- get op time {s3-s2:.3f} s')
             
-            if i in self.pmt_ids and self.wtree is not None:
+            #Check if the waveform exists
+            if i in self.pmt_ids and self.wtree is not None and self.waveform_hist_name is not None:
                 #if VERBOSE: print('pds : ',i)
                 #if i == 0: print('WTF*'*120)
                 #Get waveform info
@@ -270,7 +277,7 @@ class Loader:
         
         mcparts = []
         #Extract info into arrays
-        pdgs, engs, pxs, pys, pzs, x1s, y1s, z1s, x2s, y2s, z2s, processes, endprocesses = (
+        pdgs, engs, pxs, pys, pzs, x1s, y1s, z1s, x2s, y2s, z2s, processes, endprocesses,start_ts,end_ts = (
             self.mcpart_evt.mcpart_pdg.values,
             self.mcpart_evt.mcpart_Eng.values,
             self.mcpart_evt.mcpart_Px.values,
@@ -284,10 +291,12 @@ class Loader:
             self.mcpart_evt.mcpart_EndPointz.values,
             self.mcpart_evt.mcpart_process.values,
             self.mcpart_evt.mcpart_endprocess.values,
+            self.mcpart_evt.mcpart_StartT.values,
+            self.mcpart_evt.mcpart_EndT.values
         )
         if keep_pdgs is None:
             for i in range(len(pdgs)):
-                mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], processes[i], endprocesses[i]))
+                mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], processes[i], endprocesses[i], start_ts[i], end_ts[i]))
         return mcparts
     def get_crt_list(self):
         pass

@@ -1,5 +1,6 @@
 __pycache__*
 *__pycache__*
+__pycache__
 old_kanye.py
 testing.ipynb
 *.pyc
@@ -7,4 +8,3 @@ env
 nb/.ipynb_checkpoints
 nb/plots*
 Plots/
-config/default.py

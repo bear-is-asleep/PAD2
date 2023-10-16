@@ -1,3 +1,6 @@
+#Your config - you can also pass arguments
+from config.default import *
+
 #Boilerplate imports
 import dash
 from dash import dcc
@@ -11,14 +14,12 @@ from time import time
 import argparse
 import os
 
-#Your config - you can also pass arguments
-from config.default import *
-
 #globals - passed between various update functions
 global coatings #pds coatings
 global cmax #max pe on cbar
 global mcparts_lines
 
+#tpc0 globals
 global muons_tpc0
 global pds_tpc0
 global pds_coordinates_tpc0
@@ -57,16 +58,17 @@ l = Loader(
     load_crt=args.load_crt,
     load_mcpart=args.load_mcpart,
     mode=args.mode,
-    hdrkeys=HDRKEYS #Set in config
+    hdrkeys=HDRKEYS, #Set in config
+    pmt_ara_name=PMT_ARA_NAME, #set in config
 )
 
 #Initialize display
 run_list = l.run_list #Get list of run,subrun,evt
-run,subrun,event = run_list[0]
+run,subrun,event = run_list[0] #get first run for initialization
 start_bin = t0+dt
 end_bin = t1
 l.get_event(run,subrun,event)
-coatings = [0,1,2,3,4] #Show all pds components initially
+coatings = COATINGS #Select initial PDs to show
 cmin = 0 #minimum PE count
 
 #Muon init
@@ -79,6 +81,7 @@ else:
     muon_lines_tpc0 = [go.Scatter()]
     muon_lines_tpc1 = [go.Scatter()]
 
+#MCPart init
 if l.load_mcpart:
     mcparts = l.get_mcpart_list()
     mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
@@ -227,7 +230,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
     ]),
     # Right-hand side
     html.Div(style={'width': '15%'},children=[
-        html.Img(src=dash.get_asset_url('SBND.png'), style={'width': '100%', 'height': 'auto'}),
+        html.Img(src=dash.get_asset_url('sbnd_pretty.png'), style={'width': '100%', 'height': 'auto'}),
         html.H3(f'Mode : {l.mode}'),
         html.Img(src=dash.get_asset_url('muon_track.png'), style={'width': '100%', 'height': 'auto'}) if l.load_muon else html.H3('Muon Tracks : NA'),
         html.Img(src=dash.get_asset_url('crt_track.png'), style={'width': '100%', 'height': 'auto'}) if l.load_crt else html.H3('CRT Tracks : NA'),
@@ -245,7 +248,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
                 {'label': 'Coated (VUV) XAs', 'value': 4},
                 {'label': 'Uncoated (VIS) XAs', 'value': 3},
             ],
-            value=[0,1,2,3,4]
+            value=coatings
         ),
         html.H2('Available Runs'),
         html.Ul(children=[
@@ -272,13 +275,16 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
     global muons_tpc0
     global pds_tpc0  
     global pds_coordinates_tpc0
+    global muon_lines_tpc0
     
     global muons_tpc1
     global pds_tpc1 
     global pds_coordinates_tpc1
+    global muon_lines_tpc1
     
     global coatings
     global cmax
+    global mcparts_lines
     
     ctx = dash.callback_context
     # Check if the button triggered the callback or if a coating was changed
@@ -302,6 +308,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
             if l.load_mcpart:
                 mcparts = l.get_mcpart_list()
                 mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+                #[print(f'MCPart : ({p.x1:.2f},{p.y1:.2f},{p.z1:.2f}) to ({p.x2:.2f},{p.y2:.2f},{p.z2:.2f})') for p in mcparts]
             else:
                 mcparts_lines = [go.Scatter()]
         else:
@@ -385,10 +392,8 @@ def update_waveform_graph(click_data):
         s0 = time()
         waveform_data = pds_tpc1[ind].plot_waveform()
         s1 = time() 
-        if VERBOSE: print(f'Get waveform for PDS {pmt_id} which is {ind}: {s1-s0:.2f} s')
             
         if waveform_data is not None:
-            if VERBOSE: print('Done')
             return get_waveform(waveform_data,pmt_id=pmt_id)
 
     return go.Figure()

@@ -112,6 +112,7 @@ class PMT:
             go.Scatter: scatter point to be plotted on dash canvas
         """
         if self.waveform is not None:
+            if VERBOSE: print(f'Plotting waveform for PMT {self.id}')
             return go.Scatter(
                 x=self.waveform['time'],
                 y=self.waveform['voltage'],
@@ -119,4 +120,5 @@ class PMT:
                 name=f'Waveform for PMT {self.id}'
             )
         else:
+            if VERBOSE: print(f'No waveform for PMT {self.id}')
             return None
