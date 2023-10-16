@@ -1,1 +1,2 @@
-Filename contains two channel ids that have been flipped
+# Scrambled channels
+Filename contains two pds ids that have been flipped
