@@ -1,7 +1,7 @@
 #intime cosmics config
 
 #Get directories
-DATA_DIR = '/sbnd/data/users/brindenc/PAD/intime/test_fcl/v2' #Waveforms and hitdumper location
+DATA_DIR = '/sbnd/data/users/brindenc/PAD/intime/test_fcl/v3' #Waveforms and hitdumper location
 
 #Get fnames
 HDUMP_NAME = 'hitdumper_tree.root' #Required

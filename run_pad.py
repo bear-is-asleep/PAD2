@@ -1,5 +1,5 @@
 #Your config - you can also pass arguments
-from config.default import *
+from config.intime import *
 
 #Boilerplate imports
 import dash
@@ -36,7 +36,6 @@ parser = argparse.ArgumentParser(description="Load data - default values are sto
 
 # Add the arguments
 parser.add_argument('--data', type=str, default=DATA_DIR, required=False, help='Path to the data')
-parser.add_argument('--pad', default=os.getcwd(), required=False, help='PAD directory')
 parser.add_argument('--hdump_name', default=HDUMP_NAME, required=False, help='hitdumper file name')
 parser.add_argument('--sm_name', default=SM_NAME, required=False, help='pmt software metrics file name')
 parser.add_argument('--wfm_name', default=WFM_NAME, required=False, help='waveform file name')

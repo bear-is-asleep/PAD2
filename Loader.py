@@ -174,7 +174,7 @@ class Loader:
         if self.mcpart_df is not None:
             self.mcpart_evt = self.mcpart_df.query(query_event)
         if self.wtree is not None:
-            if any([f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}' in k for k in self.wtree.keys()]):
+            if any([f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_' in k for k in self.wtree.keys()]):
                 self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
             else: 
                 if VERBOSE: print(f'Warning: waveform for {self.hdrkeys[0]} {run} {self.hdrkeys[1]} {subrun} {self.hdrkeys[2]} {event} not in file {self.data_dir}/{self.wfm_name}')
