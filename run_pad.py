@@ -1,5 +1,5 @@
 #Your config - you can also pass arguments
-from config.intime import *
+from config.intime_crt import *
 
 #Boilerplate imports
 import dash
@@ -7,7 +7,6 @@ from dash import dcc
 from dash import html
 import numpy as np
 from variables import *
-from PMT import PMT
 from Loader import Loader
 import plotly.graph_objects as go
 from time import time
@@ -18,6 +17,7 @@ import os
 global coatings #pds coatings
 global cmax #max pe on cbar
 global mcparts_lines
+global crt_lines
 
 #tpc0 globals
 global muons_tpc0
@@ -86,15 +86,22 @@ if l.load_mcpart:
     mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
 else:
     mcparts_lines = [go.Scatter()]
+    
+#CRT track init
+if l.load_crt:
+    crt_trks = l.get_crt_list()
+    crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
+else:
+    crt_lines = [go.Scatter()]
 
 #Display figures
 WIDTH = 700
 TPC_HEIGHT = WIDTH * 4/5
 WAVEFORM_HEIGHT = WIDTH * 2/5
 def get_tpc0():
-    global pds_coordinates_tpc0,muon_lines_tpc0,mcparts_lines,cmax
+    global pds_coordinates_tpc0,muon_lines_tpc0,mcparts_lines,cmax,crt_lines
     return go.Figure(
-        data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines,
+        data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines+crt_lines,
         layout=go.Layout(
             autosize=False,
             width=WIDTH,
@@ -107,9 +114,9 @@ def get_tpc0():
         )
     )    
 def get_tpc1():
-    global pds_coordinates_tpc1,muon_lines_tpc1,mcparts_lines,cmax
+    global pds_coordinates_tpc1,muon_lines_tpc1,mcparts_lines,cmax,crt_lines
     return go.Figure(
-        data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines,
+        data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines+crt_lines,
         layout=go.Layout(
             autosize=False,
             width=WIDTH,
@@ -284,6 +291,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
     global coatings
     global cmax
     global mcparts_lines
+    global crt_lines
     
     ctx = dash.callback_context
     # Check if the button triggered the callback or if a coating was changed
@@ -307,9 +315,13 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
             if l.load_mcpart:
                 mcparts = l.get_mcpart_list()
                 mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
-                #[print(f'MCPart : ({p.x1:.2f},{p.y1:.2f},{p.z1:.2f}) to ({p.x2:.2f},{p.y2:.2f},{p.z2:.2f})') for p in mcparts]
             else:
                 mcparts_lines = [go.Scatter()]
+            if l.load_crt:
+                crt_trks = l.get_crt_list()
+                crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
+            else:
+                crt_lines = [go.Scatter()]
         else:
             print(f'Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
@@ -349,6 +361,11 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
         mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
     else:
         mcparts_lines = [go.Scatter()]
+    if l.load_crt:
+        crt_trks = l.get_crt_list()
+        crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
+    else:
+        crt_lines = [go.Scatter()]
     s2 = time()
     if VERBOSE: print(f'Get new mcpart trajectories : {s2-s1:.2f} s')
 
@@ -369,7 +386,7 @@ def update_waveform_graph(click_data):
         s0 = time()
         waveform_data = pds_tpc0[ind].plot_waveform()
         s1 = time() 
-        if VERBOSE: print(f'Get waveform for PDS {pmt_id} which is {ind}: {s1-s0:.2f} s')
+        if VERBOSE: print(f'Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
             
         if waveform_data is not None:
             if VERBOSE: print('Done')
@@ -391,6 +408,7 @@ def update_waveform_graph(click_data):
         s0 = time()
         waveform_data = pds_tpc1[ind].plot_waveform()
         s1 = time() 
+        if VERBOSE: print(f'Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
             
         if waveform_data is not None:
             return get_waveform(waveform_data,pmt_id=pmt_id)

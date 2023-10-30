@@ -6,8 +6,8 @@ import numpy as np
 from time import time
 
 class PMT:
-    def __init__(self, id, coating, tpc, location, waveform=None, op_pe=None, t1=t1, t0=t0, dt=dt):
-        self.id = id
+    def __init__(self, pmtid, coating, tpc, location, waveform=None, op_pe=None, t1=t1, t0=t0, dt=dt):
+        self.id = pmtid
         self.coating = coating
         self.location = location
         self.waveform = waveform
@@ -95,7 +95,7 @@ class PMT:
                 cmin=cmin,
                 cmax=cmax,
             ),
-            name=f'PMT {self.id}',
+            name=f'PDS {self.id}',
             customdata=[self.id],
             text=text,  # display the color value on hover
             hoverinfo='text+name',  # show the custom text and trace name on hover
@@ -112,13 +112,13 @@ class PMT:
             go.Scatter: scatter point to be plotted on dash canvas
         """
         if self.waveform is not None:
-            if VERBOSE: print(f'Plotting waveform for PMT {self.id}')
+            if VERBOSE: print(f'Plotting waveform for PDS {self.id}')
             return go.Scatter(
                 x=self.waveform['time'],
                 y=self.waveform['voltage'],
                 mode='lines',
-                name=f'Waveform for PMT {self.id}'
+                name=f'Waveform for PDS {self.id}'
             )
         else:
-            if VERBOSE: print(f'No waveform for PMT {self.id}')
+            if VERBOSE: print(f'No waveform for PDS {self.id}')
             return None

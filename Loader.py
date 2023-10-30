@@ -4,6 +4,7 @@ from variables import *
 from PMT import PMT
 from Muon import Muon
 from MCPart import MCPart
+from CRT import CRTTrack
 from time import time
 import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members
@@ -116,16 +117,23 @@ class Loader:
             if VERBOSE: print(f'Load waveforms : {s1-s0:.2f} s')
         
         #Muon info - optional
-        muonkeys = [key for key in tree.keys() if 'muon' in key]
         if load_muon:
             s0 = time()
+            muonkeys = [key for key in tree.keys() if 'muon' in key]
             self.muon_df = tree.arrays(self.hdrkeys+muonkeys,library='pd')
             s1 = time()
             if VERBOSE: print(f'Load muon tracks : {s1-s0:.2f} s')
         else: 
             self.muon_df = None
         #CRT info - optional
-        self.crt_df = None
+        if load_crt:
+            s0 = time()
+            crt_trkkeys = [key for key in tree.keys() if 'ct_' in key]
+            self.crt_df = tree.arrays(self.hdrkeys+crt_trkkeys,library='pd')
+            s1 = time()
+            if VERBOSE: print(f'Load CRT trakcs: {s1-s0:.2f} s')
+        else:
+            self.crt_df = None
         
         #MCPart info
         if load_mcpart:
@@ -173,6 +181,8 @@ class Loader:
             self.muon_evt = self.muon_df.query(query_event)
         if self.mcpart_df is not None:
             self.mcpart_evt = self.mcpart_df.query(query_event)
+        if self.crt_df is not None:
+            self.crt_evt = self.crt_df.query(query_event)
         if self.wtree is not None:
             if any([f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_' in k for k in self.wtree.keys()]):
                 self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
@@ -299,7 +309,21 @@ class Loader:
                 mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], processes[i], endprocesses[i], start_ts[i], end_ts[i]))
         return mcparts
     def get_crt_list(self):
-        pass
+        crt_trks = []
+        #Extract info into arrays
+        x1s, y1s, z1s, x2s, y2s, z2s, times, pes = (
+            self.crt_evt.ct_x1.values,
+            self.crt_evt.ct_y1.values,
+            self.crt_evt.ct_z1.values,
+            self.crt_evt.ct_x2.values,
+            self.crt_evt.ct_y2.values,
+            self.crt_evt.ct_z2.values,
+            self.crt_evt.ct_time.values,
+            self.crt_evt.ct_pes.values,
+        )
+        for i in range(len(x1s)):
+            crt_trks.append(CRTTrack(x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], times[i], pes[i]))
+        return crt_trks
     def get_pe_centroid(self,coating=0):
         pass
         
