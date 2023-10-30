@@ -139,7 +139,8 @@ Press CTRL+C to quit
 
 Opening `http://127.0.0.1:8050` in a browser will take you to the PAD display.
 
-![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD2.png)
+![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD3.png)
+![PAD](https://github.com/bear-is-asleep/PAD2/blob/master/Images/PAD3_lower.png)
 
 ### Actions
 Time sliders change the range to integrate the PE for each PDS component
