@@ -11,7 +11,7 @@ SM_NAME = None
 PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
 
 #PAD settings
-CMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
+MMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 VERBOSE = True #Doesn't really work - see variables.py
 HDRKEYS = ['run','subrun','event']
 COATINGS = [0,1,2] #All PDS components [0,1,2,3,4]
@@ -19,3 +19,4 @@ LOAD_MUON = False
 LOAD_CRT = False
 LOAD_MCPART = True
 MODE = 'op'
+T0_THRESHOLD = 10. #Min pe to denote t0

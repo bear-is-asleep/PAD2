@@ -1,6 +1,7 @@
 import plotly.graph_objects as go
 import numpy as np
 from utils.plotters import map_value_to_color
+from utils.maps import MUON_TYPES
 from variables import *
 
 class Muon:
@@ -24,7 +25,7 @@ class Muon:
         z_values = np.linspace(self.z1, self.z2, num_points)
         y_values = np.linspace(self.y1, self.y2, num_points)
 
-        text = f'Type : {self.trk_type}'
+        text = f'Type : {MUON_TYPES[self.trk_type]}'
         text += '<br>'
         text += f'x1 : {self.x1:.2f}'
         text += '<br>'

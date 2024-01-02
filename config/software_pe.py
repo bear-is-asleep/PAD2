@@ -10,7 +10,7 @@ SM_NAME = 'test_hist.root' #SM_NAME = None for no software metrics
 PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
 
 #PAD settings
-CMAX = 'global' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
+MMAX = 'global' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 VERBOSE = True
 HDRKEYS = ['run','sub','evt']
 COATINGS = [1,2] #only PMTs supported
@@ -18,3 +18,4 @@ LOAD_MUON = False
 LOAD_CRT = False
 LOAD_MCPART = False
 MODE = 'prompt'
+T0_THRESHOLD = 10. #Min pe to denote t0

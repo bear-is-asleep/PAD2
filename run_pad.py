@@ -1,5 +1,5 @@
 #Your config - you can also pass arguments
-from config.intime_crt import *
+from config.intime import *
 
 #Boilerplate imports
 import dash
@@ -15,9 +15,10 @@ import os
 
 #globals - passed between various update functions
 global coatings #pds coatings
-global cmax #max pe on cbar
+global mmax #max pe on marker size
 global mcparts_lines
 global crt_lines
+global t0s #t0s for each pds
 
 #tpc0 globals
 global muons_tpc0
@@ -68,7 +69,8 @@ start_bin = t0+dt
 end_bin = t1
 l.get_event(run,subrun,event)
 coatings = COATINGS #Select initial PDs to show
-cmin = 0 #minimum PE count
+max_marker_size = 50 #max marker size
+min_marker_size = 8 #min marker size
 
 #Muon init
 if l.load_muon:
@@ -98,8 +100,27 @@ else:
 WIDTH = 700
 TPC_HEIGHT = WIDTH * 4/5
 WAVEFORM_HEIGHT = WIDTH * 2/5
+def get_t0_minmax():
+    global t0s
+    #filter out dummy pds with nan values
+    t0s = [t0 for t0 in t0s if not np.isnan(t0)]
+    if len(t0s) == 0:
+        tmax,tmin = 1,0
+    else:
+        #get rid of outliers
+        tmax = np.percentile(t0s,99.5) # 3 sigma
+        tmin = np.percentile(t0s,0.5) # 3 sigma
+        t0s = [t0 for t0 in t0s if t0 < tmax and t0 > tmin]
+        if len(t0s) == 0:
+            tmax,tmin = 1,0
+        else:
+            tmin = np.min(t0s)
+            tmax = np.max(t0s)
+    return tmax,tmin
+    
 def get_tpc0():
-    global pds_coordinates_tpc0,muon_lines_tpc0,mcparts_lines,cmax,crt_lines
+    global pds_coordinates_tpc0,muon_lines_tpc0,mcparts_lines,mmax,crt_lines,t0s
+    tmax,tmin = get_t0_minmax()
     return go.Figure(
         data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines+crt_lines,
         layout=go.Layout(
@@ -109,12 +130,13 @@ def get_tpc0():
             showlegend=False,
             xaxis=dict(range=[0, 500]),  # Set x-axis limits
             yaxis=dict(range=[-200, 200]),   # Set y-axis limits
-            coloraxis=dict(cmax=cmax),
+            coloraxis=dict(cmin=tmin,cmax=tmax),
             margin=dict(l=50, r=50, b=50, t=50, pad=0),
         )
     )    
 def get_tpc1():
-    global pds_coordinates_tpc1,muon_lines_tpc1,mcparts_lines,cmax,crt_lines
+    global pds_coordinates_tpc1,muon_lines_tpc1,mcparts_lines,mmax,crt_lines,t0s
+    tmax,tmin = get_t0_minmax()
     return go.Figure(
         data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines+crt_lines,
         layout=go.Layout(
@@ -124,7 +146,7 @@ def get_tpc1():
             showlegend=False,
             xaxis=dict(range=[0, 500]),  # Set x-axis limits
             yaxis=dict(range=[-200, 200]),   # Set y-axis limits
-            coloraxis=dict(cmax=cmax),
+            coloraxis=dict(cmin=tmin,cmax=tmax),
             margin=dict(l=50, r=50, b=50, t=50, pad=0),
         )
     )
@@ -151,21 +173,30 @@ def init_pds_dash():
     global pds_coordinates_tpc1
     global pds_tpc1
     
-    global cmax
+    global mmax
     global coatings
+    
+    global t0s
     
     pds_tpc0 = l.get_pmt_list(tpc=0,coatings=coatings) #Get list of pmts
     pds_tpc1 = l.get_pmt_list(tpc=1,coatings=coatings) #Get list of pmts
-    if CMAX == 'global':
-        cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
-    elif CMAX == 'dynamic':
-        cmax = np.max([pds.get_pe_start_stop(start_bin,end_bin) for pds in pds_tpc0+pds_tpc1])
+    #Get t0s for each pds
+    t0s = [pds.get_t0_threshold(T0_THRESHOLD) for pds in pds_tpc0+pds_tpc1]
+    tmax,tmin = get_t0_minmax()
+    if MMAX == 'global':
+        mmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+    elif MMAX == 'dynamic':
+        mmax = np.max([pds.get_pe_start_stop(start_bin,end_bin) for pds in pds_tpc0+pds_tpc1])
     else:
-        if VERBOSE: print(f'{CMAX} is not a valid setting for setting pe color')
-        cmax = None
+        if VERBOSE: print(f'{MMAX} is not a valid setting for setting pe size')
+        mmax = None
     pds_ids = [pds.id for pds in pds_tpc0+pds_tpc1]
-    pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
-    pds_coordinates_tpc1 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=cmin,cmax=cmax) for pds in pds_tpc1]
+    pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+        for pds in pds_tpc0]
+    pds_coordinates_tpc1 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+        for pds in pds_tpc1]
 
 init_pds_dash()
 
@@ -289,16 +320,17 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
     global muon_lines_tpc1
     
     global coatings
-    global cmax
+    global mmax
     global mcparts_lines
     global crt_lines
+    global t0s
     
     ctx = dash.callback_context
     # Check if the button triggered the callback or if a coating was changed
     if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks' or (coatings != values and values != []):  
         coatings = values
         if [run,subrun,event] in l.run_list:
-            if VERBOSE: print(f'Retrieving Run {run} Subrun {subrun} Event {event}')
+            if VERBOSE: print(f'-Retrieving Run {run} Subrun {subrun} Event {event}')
             l.get_event(run, subrun, event)
             
             pds_tpc0 = l.get_pmt_list(tpc=0,coatings=coatings)  
@@ -323,28 +355,34 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
             else:
                 crt_lines = [go.Scatter()]
         else:
-            print(f'Run {run} Subrun {subrun} Event {event} not in file')
+            print(f'-Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
-                print('List of run,subrun,events - ')
+                print('-List of run,subrun,events - ')
                 #print(l.run_list)
                 return None
     
     #PDS
     #if VERBOSE: print('Update time window')
     s0 = time()
-    if CMAX == 'global':
-        cmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
-    elif CMAX == 'dynamic':
-        cmax = np.max([pds.get_pe_start_stop(start_time_bin,end_time_bin) for pds in pds_tpc0+pds_tpc1])
+    #Get t0s for each pds
+    t0s = [pds.get_t0_threshold(T0_THRESHOLD) for pds in pds_tpc0+pds_tpc1]
+    tmax,tmin = get_t0_minmax()
+    if MMAX == 'global':
+        mmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
+    elif MMAX == 'dynamic':
+        mmax = np.max([pds.get_pe_start_stop(start_bin,end_bin) for pds in pds_tpc0+pds_tpc1])
     else:
-        print(f'{CMAX} is not a valid setting for setting pe color')
-        cmax = None
-    cmin = 0
+        if VERBOSE: print(f'-{MMAX} is not a valid setting for setting pe size')
+        mmax = None
     pds_ids = [pds.id for pds in pds_tpc0+pds_tpc1]
-    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=cmin,cmax=cmax) for pds in pds_tpc0]
-    pds_coordinates_tpc1 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=cmin,cmax=cmax) for pds in pds_tpc1]
+    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+        for pds in pds_tpc0]
+    pds_coordinates_tpc1 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+        for pds in pds_tpc1]
     s1 = time()
-    if VERBOSE: print(f'Get new PE from {start_time_bin} to {end_time_bin} (ns): {s1-s0:.2f} s')
+    if VERBOSE: print(f'-Get new PE from {start_time_bin} to {end_time_bin} (ns): {s1-s0:.2f} s')
     
     #Muons
     s0 = time()
@@ -355,19 +393,21 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
         muon_lines_tpc0 = [go.Scatter()]
         muon_lines_tpc1 = [go.Scatter()]
     s1 = time()
-    if VERBOSE: print(f'Get new muon trajectories : {s1-s0:.2f} s')
+    if VERBOSE: print(f'-Get new muon trajectories : {s1-s0:.2f} s')
     if l.load_mcpart:
         mcparts = l.get_mcpart_list()
         mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
     else:
         mcparts_lines = [go.Scatter()]
+        
+    #CRTs
     if l.load_crt:
         crt_trks = l.get_crt_list()
         crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
     else:
         crt_lines = [go.Scatter()]
     s2 = time()
-    if VERBOSE: print(f'Get new mcpart trajectories : {s2-s1:.2f} s')
+    if VERBOSE: print(f'-Get new mcpart trajectories : {s2-s1:.2f} s')
 
     return [get_tpc0(),get_tpc1()]
 
@@ -380,16 +420,16 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
 
 def update_waveform_graph(click_data):
     if click_data is not None:
-        if VERBOSE: print('Drawing waveform')
+        if VERBOSE: print('-Drawing waveform')
         pmt_id = click_data['points'][0]['customdata']
         ind = l.pds_tpc0_ids.index(pmt_id) #find index of pmt
         s0 = time()
         waveform_data = pds_tpc0[ind].plot_waveform()
         s1 = time() 
-        if VERBOSE: print(f'Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
+        if VERBOSE: print(f'-Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
             
         if waveform_data is not None:
-            if VERBOSE: print('Done')
+            if VERBOSE: print('-Done')
             return get_waveform(waveform_data,pmt_id=pmt_id)
 
     return go.Figure()
@@ -402,13 +442,13 @@ def update_waveform_graph(click_data):
 
 def update_waveform_graph(click_data):
     if click_data is not None:
-        if VERBOSE: print('Drawing waveform')
+        if VERBOSE: print('-Drawing waveform')
         pmt_id = click_data['points'][0]['customdata']
         ind = l.pds_tpc1_ids.index(pmt_id) #find index of pmt
         s0 = time()
         waveform_data = pds_tpc1[ind].plot_waveform()
         s1 = time() 
-        if VERBOSE: print(f'Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
+        if VERBOSE: print(f'-Get waveform for PDS {pmt_id}: {s1-s0:.2f} s')
             
         if waveform_data is not None:
             return get_waveform(waveform_data,pmt_id=pmt_id)

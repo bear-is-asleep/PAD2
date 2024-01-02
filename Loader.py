@@ -326,11 +326,3 @@ class Loader:
         return crt_trks
     def get_pe_centroid(self,coating=0):
         pass
-        
-            
-            
-
-
-#Store muon track info
-
-#Store CRT track info
