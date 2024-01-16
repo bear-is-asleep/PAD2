@@ -7,7 +7,8 @@ from MCPart import MCPart
 from CRT import CRTTrack
 from time import time
 import numpy as np
-from utils.helpers import convert_edges_to_centers,get_common_members
+from utils.helpers import convert_edges_to_centers,get_common_members,is_traj_in_volume
+from utils.globals import SBND_VOL
 import os
 
 class Loader:
@@ -91,8 +92,9 @@ class Loader:
         elif self.hdump_name is not None and self.software_name is not None:  #Default to hitdumper tree if both provided
             tree = uproot.open(f'{data_dir}/{self.hdump_name}:hitdumper;1/hitdumpertree;1')
         s1 = time()
-        if VERBOSE: print(f'Load commissioning tree : {s1-s0:.2f} s')
         self.run_list = tree.arrays(self.hdrkeys,library='pd').values
+        if VERBOSE: print(f'Load commissioning tree ({len(self.run_list)} events) : {s1-s0:.2f} s')
+        if VERBOSE and len(self.run_list) >= 100: print(f'WARNING: Loading too many events. This will probably kill the kernel.')
         
         #Op info
         s0 = time()
@@ -131,7 +133,7 @@ class Loader:
             crt_trkkeys = [key for key in tree.keys() if 'ct_' in key]
             self.crt_df = tree.arrays(self.hdrkeys+crt_trkkeys,library='pd')
             s1 = time()
-            if VERBOSE: print(f'Load CRT trakcs: {s1-s0:.2f} s')
+            if VERBOSE: print(f'Load CRT tracks: {s1-s0:.2f} s')
         else:
             self.crt_df = None
         
@@ -308,7 +310,7 @@ class Loader:
             for i in range(len(pdgs)):
                 mcparts.append(MCPart(pdgs[i], engs[i], pxs[i], pys[i], pzs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], processes[i], endprocesses[i], start_ts[i], end_ts[i]))
         return mcparts
-    def get_crt_list(self):
+    def get_crt_list(self,filter_volume=True):
         crt_trks = []
         #Extract info into arrays
         x1s, y1s, z1s, x2s, y2s, z2s, times, pes = (
@@ -322,6 +324,9 @@ class Loader:
             self.crt_evt.ct_pes.values,
         )
         for i in range(len(x1s)):
+            traj = [x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i]]
+            if filter_volume and not is_traj_in_volume(traj,SBND_VOL):
+                continue
             crt_trks.append(CRTTrack(x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], times[i], pes[i]))
         return crt_trks
     def get_pe_centroid(self,coating=0):

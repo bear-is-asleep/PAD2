@@ -1,12 +1,16 @@
 #intime cosmics config
 
 #Get directories
-DATA_DIR = '/sbnd/data/users/brindenc/PAD/test_fcl/v3' #Waveforms and hitdumper location
+#DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/test_fcl/v5' #Waveforms and hitdumper location
+DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/intime'
 
 #Get fnames
-HDUMP_NAME = 'hitdumper_tree.root' #Required
-WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
-SM_NAME = 'test_hist.root' #SM_NAME = None if you did not make software metrics
+#HDUMP_NAME = 'hitdumper_tree.root' #Required
+HDUMP_NAME = 'hitdumper_small.root'
+#HDUMP_NAME = 'hitdumper_full.root'
+#HDUMP_NAME = 'hitdumper_1.root'
+WFM_NAME = None #WFM_NAME = None if you did not make waveforms
+SM_NAME = None #SM_NAME = None if you did not make software metrics
 PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
 
 #PAD settings

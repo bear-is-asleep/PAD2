@@ -1,5 +1,5 @@
 #Your config - you can also pass arguments
-from config.intime import *
+from config.intime_crt import *
 
 #Boilerplate imports
 import dash
@@ -370,7 +370,7 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
     if MMAX == 'global':
         mmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
     elif MMAX == 'dynamic':
-        mmax = np.max([pds.get_pe_start_stop(start_bin,end_bin) for pds in pds_tpc0+pds_tpc1])
+        mmax = np.max([pds.get_pe_start_stop(start_time_bin,end_time_bin) for pds in pds_tpc0+pds_tpc1])
     else:
         if VERBOSE: print(f'-{MMAX} is not a valid setting for setting pe size')
         mmax = None
