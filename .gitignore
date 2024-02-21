@@ -8,3 +8,5 @@ env
 nb/.ipynb_checkpoints
 nb/plots*
 Plots/
+*.root
+.config

@@ -5,7 +5,7 @@ from utils.maps import MUON_TYPES
 from variables import *
 
 class Muon:
-    def __init__(self, trk_type, tpc, x1, y1, z1, x2, y2, z2, theta_xz, theta_yz):
+    def __init__(self, trk_type, tpc, x1, y1, z1, x2, y2, z2, theta_xz, theta_yz, t0):
         self.trk_type = trk_type
         self.tpc = tpc 
         self.x1 = x1
@@ -16,6 +16,7 @@ class Muon:
         self.z2 = z2
         self.theta_xz = theta_xz
         self.theta_yz = theta_yz
+        self.t0 = t0
         
     def plot_line(self,ind,tpc):
         if self.tpc != tpc: 
@@ -27,24 +28,18 @@ class Muon:
 
         text = f'Type : {MUON_TYPES[self.trk_type]}'
         text += '<br>'
-        text += f'x1 : {self.x1:.2f}'
+        text += f'Start : ({self.x1:.2f},{self.y1:.2f},{self.z1:.2f})'
         text += '<br>'
-        text += f'y1 : {self.y1:.2f}'
+        text += f'End : ({self.x2:.2f},{self.y2:.2f},{self.z2:.2f})'
         text += '<br>'
-        text += f'z1 : {self.z1:.2f}'
-        text += '<br>'
-        text += f'x2 : {self.x2:.2f}'
-        text += '<br>'
-        text += f'y2 : {self.y2:.2f}'
-        text += '<br>'
-        text += f'z2 : {self.z2:.2f}'
+        text += f't0 : {self.t0:.2f}'
         text += '<br>'
         text += f'theta_xz : {self.theta_xz:.2f}'
         text += '<br>'
         text += f'theta_yz : {self.theta_yz:.2f}'
         text += '<br>'
         
-        if VERBOSE: print(f'Muon {ind} TPC{self.tpc}: ({self.x1:.2f},{self.y1:.2f},{self.z1:.2f}) to ({self.x2:.2f},{self.y2:.2f},{self.z2:.2f})')
+        if VERBOSE: print(f'-Muon {ind} TPC{self.tpc}: ({self.x1:.2f},{self.y1:.2f},{self.z1:.2f}) -> ({self.x2:.2f},{self.y2:.2f},{self.z2:.2f})')
         
         color = map_value_to_color(self.trk_type,0,5,cmap='rainbow')
         return go.Scatter(

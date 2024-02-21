@@ -20,7 +20,7 @@ def set_style(ax,legend_size=16,legend_loc='best',axis_size=16,title_size=20,tic
     else:
       ax.legend(loc=legend_loc,fontsize=legend_size)
 
-def map_value_to_color(value, min_val, max_val, cmap='viridis',return_hex=True):
+def map_value_to_color(value, min_val, max_val, cmap='viridis',return_hex=True,return_mappable=False):
     # Create a colormap
     cmap = plt.get_cmap(cmap)  # replace 'viridis' with your colormap
     norm = mcolors.Normalize(vmin=min_val, vmax=max_val)
@@ -28,5 +28,8 @@ def map_value_to_color(value, min_val, max_val, cmap='viridis',return_hex=True):
     rgb_color = cmap(normalized_value)
     if return_hex:
         return mcolors.rgb2hex(rgb_color[:3])
+    if return_mappable:
+        mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
+        return rbg_color, mappable
     return rgb_color
   

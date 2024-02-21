@@ -1,19 +1,22 @@
-from utils.plotters import map_value_to_color
-from utils.maps import COATING_MAP
 import pandas as pd
 import plotly.graph_objects as go
-from variables import *
 import numpy as np
 from time import time
+#My imports
+from utils.plotters import map_value_to_color
 
 class PMT:
-    def __init__(self, pmtid, coating, tpc, location, waveform=None, op_pe=None, t1=t1, t0=t0, dt=dt):
+    def __init__(self, pmtid, pd_type, tpc, location, sampling, pds_box, waveform=None, op_pe=None, t1=0., t0=1600., dt=2.):
         self.id = pmtid
-        self.coating = coating
+        self.pd_type = pd_type
         self.location = location
         self.waveform = waveform
+        self.t0 = t0
+        self.t1 = t1
         self.dt = dt
         self.tpc = tpc
+        self.sampling = sampling
+        self.pds_box = pds_box
 
         if op_pe is not None:
             self.op_pe = pd.DataFrame(op_pe)
@@ -39,6 +42,10 @@ class PMT:
         """
         start_ind = np.searchsorted(self.bins,start) 
         end_ind = np.searchsorted(self.bins,end)
+        if end_ind == len(self.bins): #handle case where end is out of bounds
+            end_ind -= 1
+        # print('start_ind : ',start_ind)
+        # print('end_ind : ',end_ind)
         if start_ind < end_ind:
             mask = np.full(len(self.op_pe),False)
             inds = list(range(start_ind,end_ind))
@@ -57,12 +64,14 @@ class PMT:
             first_bin = self.op_pe.loc[mask, 'time_bin'].iloc[0]
             tind = self.op_pe.loc[self.op_pe['time_bin'] == first_bin].index[0]
         else:
-            return np.nan
-        return self.bins[tind] 
+            self.t0 = np.nan
+            return self.t0
+        self.t0 = self.bins[tind]
+        return self.t0
         
         
 
-    def plot_coordinates(self, start, end, pds_ids,cmap='plasma', cmin=0, cmax=None, msize_max=1., msize_min=1.,t0_threshold=0.):
+    def plot_coordinates(self, start, end, pds_ids,cmap='plasma', cmin=0, cmax=None, msize_max=1., msize_min=1.):
         """ 
         Plots PMTs onto PAD grid
 
@@ -89,19 +98,20 @@ class PMT:
         else:
             showscale = False
         cum_pe = self.get_pe_start_stop(start, end)
-        t0 = self.get_t0_threshold(t0_threshold)
         s1 = time()
         #if VERBOSE: print(f'-- time to bin {s1-s0:.3f} s')
         msize = cum_pe/msize_max  # marker size normalized to other pmts
         msize = msize if msize > 5 else 5
-        hex_color = map_value_to_color(t0,cmin,cmax,cmap=cmap)
+        hex_color = map_value_to_color(self.t0,cmin,cmax,cmap=cmap)
         text = f'ID : {self.id:.0f}'
-        text += '<br>'
-        text += f'Coating : {COATING_MAP[self.coating]}'
         text += '<br>'
         text += f'Cum. PE : {cum_pe:.2f}'
         text += '<br>'
-        text += f't0 : {t0:.2f}'
+        text += f't0 : {self.t0:.2f}'
+        text += '<br>'
+        text += f'Sampling : {self.sampling}'
+        text += '<br>'
+        text += f'Box : {self.pds_box}'
         # print('color : ',color)
         # print('hex : ',hex_color)
         sc = go.Scatter(
@@ -115,8 +125,11 @@ class PMT:
                 showscale=showscale,
                 cmin=cmin,
                 cmax=cmax,
+                colorbar=dict(
+                    title='t0 (ns)'
+                )
             ),
-            name=f'PDS {self.id}',
+            name=f'{self.pd_type}',
             customdata=[self.id],
             text=text,  # display the color value on hover
             hoverinfo='text+name',  # show the custom text and trace name on hover

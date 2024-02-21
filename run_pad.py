@@ -1,4 +1,5 @@
 #Your config - you can also pass arguments
+#from config.xa_test_rodrigo import *
 from config.intime_crt import *
 
 #Boilerplate imports
@@ -16,8 +17,6 @@ import os
 #globals - passed between various update functions
 global coatings #pds coatings
 global mmax #max pe on marker size
-global mcparts_lines
-global crt_lines
 global t0s #t0s for each pds
 
 #tpc0 globals
@@ -25,12 +24,16 @@ global muons_tpc0
 global pds_tpc0
 global pds_coordinates_tpc0
 global muon_lines_tpc0
+global mcparts_lines_tpc0
+global crt_lines_tpc0
 
 #tpc 1 globals
 global muons_tpc1
 global pds_tpc1
 global pds_coordinates_tpc1
 global muon_lines_tpc1
+global mcparts_lines_tpc1
+global crt_lines_tpc1
 
 # Create the parser
 parser = argparse.ArgumentParser(description="Load data - default values are stored in the config selected")
@@ -44,22 +47,40 @@ parser.add_argument('--load_muon',type=bool, default=LOAD_MUON, required=False, 
 parser.add_argument('--load_crt',type=bool, default=LOAD_CRT, required=False, help='load crt info')
 parser.add_argument('--load_mcpart',type=bool, default=LOAD_MCPART, required=False, help='load mcpart info')
 parser.add_argument('--mode',type=str, default=MODE, help='Optical detector mode')
+parser.add_argument('--filter_primaries',type=bool, default=MCPART_FILTER_TIME, help='Filter mcpart to +- 10us around beam window')
+parser.add_argument('--crt_filter_tpc',type=bool, default=CRT_FILTER_TPC, help='Filter CRT tracks to TPC')
+parser.add_argument('--mcpart_filter_tpc',type=bool, default=MCPART_FILTER_TIME, help='Filter MCPart to TPC')
 
 # Parse the arguments
 args = parser.parse_args()
 
+#Print the arguments
+print(50*'*')
+print('Config : ')
+[print(f'-{key} : {value}') for key,value in vars(args).items()]
+print(f'-pmt_ara_name : {PMT_ARA_NAME}')
+print(f'-hdrkeys : {HDRKEYS}')
+print(f'-coatings : {COATINGS}')
+print(f'-t0 : {t0}')
+print(f'-t1 : {t1}')
+print(f'-dt : {dt}')
+print(f'-mmax : {MMAX}')
+print(f'-t0_thresholds : {T0_THRESHOLDS}')
+print(f'-max_spread : {MAX_SPREAD}')
+
 # Use the arguments
 l = Loader(
     data_dir=args.data,
-    hdump_name=args.hdump_name, #Set in config or parsers
-    software_name=args.sm_name, #Set in config or parsers
-    wfm_name=args.wfm_name, #Set in config or parsers
+    hdump_name=args.hdump_name, 
+    software_name=args.sm_name, 
+    wfm_name=args.wfm_name, 
     load_muon=args.load_muon,
     load_crt=args.load_crt,
     load_mcpart=args.load_mcpart,
     mode=args.mode,
-    hdrkeys=HDRKEYS, #Set in config
-    pmt_ara_name=PMT_ARA_NAME, #set in config
+    hdrkeys=HDRKEYS, 
+    pmt_ara_name=PMT_ARA_NAME, 
+    filter_primaries=args.filter_primaries 
 )
 
 #Initialize display
@@ -67,6 +88,7 @@ run_list = l.run_list #Get list of run,subrun,evt
 run,subrun,event = run_list[0] #get first run for initialization
 start_bin = t0+dt
 end_bin = t1
+dt_window = t1-t0
 l.get_event(run,subrun,event)
 coatings = COATINGS #Select initial PDs to show
 max_marker_size = 50 #max marker size
@@ -85,32 +107,40 @@ else:
 #MCPart init
 if l.load_mcpart:
     mcparts = l.get_mcpart_list()
-    mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+    mcparts_lines_tpc0 = [mcparts[i].plot_line(i,0,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
+    mcparts_lines_tpc1 = [mcparts[i].plot_line(i,1,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
 else:
-    mcparts_lines = [go.Scatter()]
+    mcparts_lines_tpc0 = [go.Scatter()]
+    mcparts_lines_tpc1 = [go.Scatter()]
     
 #CRT track init
 if l.load_crt:
     crt_trks = l.get_crt_list()
-    crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
+    crt_lines_tpc0 = [crt_trks[i].plot_line(i,0,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
+    crt_lines_tpc1 = [crt_trks[i].plot_line(i,1,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
 else:
-    crt_lines = [go.Scatter()]
+    crt_lines_tpc0 = [go.Scatter()]
+    crt_lines_tpc1 = [go.Scatter()]
 
 #Display figures
 WIDTH = 700
 TPC_HEIGHT = WIDTH * 4/5
 WAVEFORM_HEIGHT = WIDTH * 2/5
-def get_t0_minmax():
+def get_t0_minmax(max_spread=MAX_SPREAD):
     global t0s
+    tmax,tmin = 1e10,-1e10
     #filter out dummy pds with nan values
     t0s = [t0 for t0 in t0s if not np.isnan(t0)]
     if len(t0s) == 0:
         tmax,tmin = 1,0
     else:
-        #get rid of outliers
-        tmax = np.percentile(t0s,99.5) # 3 sigma
-        tmin = np.percentile(t0s,0.5) # 3 sigma
-        t0s = [t0 for t0 in t0s if t0 < tmax and t0 > tmin]
+        while (tmax - tmin) > max_spread:
+            #get rid of outliers
+            if len(t0s) == 0:
+                break
+            tmax = np.percentile(t0s,99.5) # 3 sigma
+            tmin = np.percentile(t0s,0.5) # 3 sigma
+            t0s = [t0 for t0 in t0s if t0 <= tmax and t0 >= tmin]
         if len(t0s) == 0:
             tmax,tmin = 1,0
         else:
@@ -122,7 +152,7 @@ def get_tpc0():
     global pds_coordinates_tpc0,muon_lines_tpc0,mcparts_lines,mmax,crt_lines,t0s
     tmax,tmin = get_t0_minmax()
     return go.Figure(
-        data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines+crt_lines,
+        data=pds_coordinates_tpc0+muon_lines_tpc0+mcparts_lines_tpc0+crt_lines_tpc0,
         layout=go.Layout(
             autosize=False,
             width=WIDTH,
@@ -132,13 +162,15 @@ def get_tpc0():
             yaxis=dict(range=[-200, 200]),   # Set y-axis limits
             coloraxis=dict(cmin=tmin,cmax=tmax),
             margin=dict(l=50, r=50, b=50, t=50, pad=0),
+            xaxis_title='z [cm]',
+            yaxis_title='y [cm]',
         )
     )    
 def get_tpc1():
     global pds_coordinates_tpc1,muon_lines_tpc1,mcparts_lines,mmax,crt_lines,t0s
     tmax,tmin = get_t0_minmax()
     return go.Figure(
-        data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines+crt_lines,
+        data=pds_coordinates_tpc1+muon_lines_tpc1+mcparts_lines_tpc1+crt_lines_tpc1,
         layout=go.Layout(
             autosize=False,
             width=WIDTH,
@@ -148,6 +180,8 @@ def get_tpc1():
             yaxis=dict(range=[-200, 200]),   # Set y-axis limits
             coloraxis=dict(cmin=tmin,cmax=tmax),
             margin=dict(l=50, r=50, b=50, t=50, pad=0),
+            xaxis_title='z [cm]',
+            yaxis_title='y [cm]',
         )
     )
 def get_waveform(waveform_data,pmt_id=None):
@@ -164,6 +198,17 @@ def get_waveform(waveform_data,pmt_id=None):
                                 margin=dict(l=50, r=50, b=50, t=50, pad=0),
                             )
                         )
+#Get t0s for each pds and set t0 (different thresholds for pmt and xa)
+def get_t0s():
+    global t0s
+    
+    t0s = []
+    for pds in pds_tpc0+pds_tpc1:
+        if 'pmt' in pds.pd_type:
+            t0s.append(pds.get_t0_threshold(T0_THRESHOLDS[0])) #also sets t0
+        else: #assume xa
+            t0s.append(pds.get_t0_threshold(T0_THRESHOLDS[1])) #also sets t0
+    
 
 #PDS init
 def init_pds_dash():
@@ -178,10 +223,10 @@ def init_pds_dash():
     
     global t0s
     
-    pds_tpc0 = l.get_pmt_list(tpc=0,coatings=coatings) #Get list of pmts
-    pds_tpc1 = l.get_pmt_list(tpc=1,coatings=coatings) #Get list of pmts
+    pds_tpc0 = l.get_pmt_list(t0,t1,dt,tpc=0,coatings=coatings) #Get list of pmts
+    pds_tpc1 = l.get_pmt_list(t0,t1,dt,tpc=1,coatings=coatings) #Get list of pmts
     #Get t0s for each pds
-    t0s = [pds.get_t0_threshold(T0_THRESHOLD) for pds in pds_tpc0+pds_tpc1]
+    get_t0s() #sets t0s
     tmax,tmin = get_t0_minmax()
     if MMAX == 'global':
         mmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
@@ -192,10 +237,10 @@ def init_pds_dash():
         mmax = None
     pds_ids = [pds.id for pds in pds_tpc0+pds_tpc1]
     pds_coordinates_tpc0 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=tmin,cmax=tmax
-                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size)\
         for pds in pds_tpc0]
     pds_coordinates_tpc1 = [pds.plot_coordinates(start_bin,end_bin,pds_ids,cmin=tmin,cmax=tmax
-                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size)\
         for pds in pds_tpc1]
 
 init_pds_dash()
@@ -204,9 +249,9 @@ init_pds_dash()
 app = dash.Dash(__name__)
 
 # Layout for the Dash app
-app.layout = html.Div(style={'display':'flex'},children=[
+app.layout = html.Div(style={'display':'flex', 'font-family': 'Verdana'},children=[
     html.Div(style={'width': '85%'},children=[
-        html.H1('PAD'),
+        html.H1('PAD (PDS Analysis Display)'),
         html.Label('Run: '),
         dcc.Input(id='run-input', type='number', value=run),  # initialize with run from l.run_list
 
@@ -216,7 +261,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
         html.Label('Event: '),
         dcc.Input(id='event-input', type='number', value=event),  # initialize with event from l.run_list
         html.Button('Submit', id='submit-button', n_clicks=0),
-        html.Br(),
+        html.Br(),  
         html.Label('t0 [ns]: '),
         dcc.Slider(
             id='t0',
@@ -227,13 +272,13 @@ app.layout = html.Div(style={'display':'flex'},children=[
             marks=None,
             tooltip={"placement": "bottom", "always_visible": True}
         ),
-        html.Label('t1 [ns]: '),
+        html.Label('time window [ns]: '),
         dcc.Slider(
-            id='t1',
-            min=t0,  # minimum value
-            max=t1,  # maximum value
+            id='dt_window',
+            min=dt,  # minimum value
+            max=t1-t0,  # maximum value
             step=dt,  # step size
-            value=t1,  # current value at t0
+            value=dt_window,  # dt window for summing
             marks=None,
             tooltip={"placement": "bottom", "always_visible": True}
         ),
@@ -241,7 +286,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
         html.Div(style={'display': 'flex'}, children=[
             # TPC0 Div
             html.Div(children=[
-                html.H2('TPC0'),
+                html.H2('TPC0 - East APA Back'),
                 dcc.Graph(
                     id='tpc0',
                     figure=get_tpc0(),
@@ -253,7 +298,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
             ]),
             # TPC1 Div
             html.Div(children=[
-                html.H2('TPC1'),
+                html.H2('TPC1 - West APA Front'),
                 dcc.Graph(
                     id='tpc1',
                     figure=get_tpc1()
@@ -289,7 +334,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
         ),
         html.H2('Available Runs'),
         html.Ul(children=[
-            html.Li(f'Run: {run}, Subrun: {subrun}, Event: {event}') for run, subrun, event in run_list
+            html.Li(f'Run: {run}, Subrun: {subrun}, Event: {event}', style={'font-size': '12px'}) for run, subrun, event in run_list
         ])
     ])
 ])
@@ -299,7 +344,7 @@ app.layout = html.Div(style={'display':'flex'},children=[
     dash.dependencies.Output('tpc0', 'figure'),  
     dash.dependencies.Output('tpc1', 'figure'),
     [dash.dependencies.Input('t0', 'value'),      
-     dash.dependencies.Input('t1', 'value'),
+     dash.dependencies.Input('dt_window', 'value'),
      dash.dependencies.Input('submit-button', 'n_clicks'),
      dash.dependencies.Input('pds_coatings', 'value')],  
     [dash.dependencies.State('run-input', 'value'),  
@@ -307,22 +352,24 @@ app.layout = html.Div(style={'display':'flex'},children=[
      dash.dependencies.State('event-input', 'value')]  
 )
 
-def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event):
+def update_tpcs(start_time_bin, dt_window_size, n_clicks,values,run, subrun, event):
     #Make graph objects global
     global muons_tpc0
     global pds_tpc0  
     global pds_coordinates_tpc0
     global muon_lines_tpc0
+    global mcparts_lines_tpc0
+    global crt_lines_tpc0
     
     global muons_tpc1
     global pds_tpc1 
     global pds_coordinates_tpc1
     global muon_lines_tpc1
+    global mcparts_lines_tpc1
+    global crt_lines_tpc1
     
     global coatings
     global mmax
-    global mcparts_lines
-    global crt_lines
     global t0s
     
     ctx = dash.callback_context
@@ -330,11 +377,11 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
     if ctx.triggered[0]['prop_id'] == 'submit-button.n_clicks' or (coatings != values and values != []):  
         coatings = values
         if [run,subrun,event] in l.run_list:
-            if VERBOSE: print(f'-Retrieving Run {run} Subrun {subrun} Event {event}')
+            if VERBOSE: print(f'Retrieving Run {run} Subrun {subrun} Event {event}')
             l.get_event(run, subrun, event)
             
-            pds_tpc0 = l.get_pmt_list(tpc=0,coatings=coatings)  
-            pds_tpc1 = l.get_pmt_list(tpc=1,coatings=coatings)
+            pds_tpc0 = l.get_pmt_list(t0,t1,dt,tpc=0,coatings=coatings)  
+            pds_tpc1 = l.get_pmt_list(t0,t1,dt,tpc=1,coatings=coatings)
             
             if l.load_muon:
                 muons_tpc0 = l.get_muon_list(tpc=0)
@@ -346,69 +393,78 @@ def update_tpcs(start_time_bin, end_time_bin, n_clicks,values,run, subrun, event
                 muon_lines_tpc1 = [go.Scatter()]
             if l.load_mcpart:
                 mcparts = l.get_mcpart_list()
-                mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
+                mcparts_lines_tpc0 = [mcparts[i].plot_line(i,0,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
+                mcparts_lines_tpc1 = [mcparts[i].plot_line(i,1,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
             else:
-                mcparts_lines = [go.Scatter()]
+                mcparts_lines_tpc0 = [go.Scatter()]
+                mcparts_lines_tpc1 = [go.Scatter()]
             if l.load_crt:
                 crt_trks = l.get_crt_list()
-                crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
+                crt_lines_tpc0 = [crt_trks[i].plot_line(i,0,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
+                crt_lines_tpc1 = [crt_trks[i].plot_line(i,1,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
             else:
-                crt_lines = [go.Scatter()]
+                crt_lines_tpc0 = [go.Scatter()]
+                crt_lines_tpc1 = [go.Scatter()]
         else:
             print(f'-Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
-                print('-List of run,subrun,events - ')
-                #print(l.run_list)
                 return None
     
     #PDS
     #if VERBOSE: print('Update time window')
     s0 = time()
     #Get t0s for each pds
-    t0s = [pds.get_t0_threshold(T0_THRESHOLD) for pds in pds_tpc0+pds_tpc1]
+    get_t0s() #sets t0s
     tmax,tmin = get_t0_minmax()
     if MMAX == 'global':
         mmax = np.max([pds.op_pe.op_pe.sum() for pds in pds_tpc0+pds_tpc1])
     elif MMAX == 'dynamic':
-        mmax = np.max([pds.get_pe_start_stop(start_time_bin,end_time_bin) for pds in pds_tpc0+pds_tpc1])
+        mmax = np.max([pds.get_pe_start_stop(start_time_bin,start_time_bin+dt_window_size) for pds in pds_tpc0+pds_tpc1])
     else:
         if VERBOSE: print(f'-{MMAX} is not a valid setting for setting pe size')
         mmax = None
     pds_ids = [pds.id for pds in pds_tpc0+pds_tpc1]
-    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=tmin,cmax=tmax
-                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+    pds_coordinates_tpc0 = [pds.plot_coordinates(start_time_bin,start_time_bin+dt_window_size,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size)\
         for pds in pds_tpc0]
-    pds_coordinates_tpc1 = [pds.plot_coordinates(start_time_bin,end_time_bin,pds_ids,cmin=tmin,cmax=tmax
-                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size,t0_threshold=T0_THRESHOLD)\
+    pds_coordinates_tpc1 = [pds.plot_coordinates(start_time_bin,start_time_bin+dt_window_size,pds_ids,cmin=tmin,cmax=tmax
+                                                 ,msize_max=mmax/max_marker_size,msize_min=min_marker_size)\
         for pds in pds_tpc1]
     s1 = time()
-    if VERBOSE: print(f'-Get new PE from {start_time_bin} to {end_time_bin} (ns): {s1-s0:.2f} s')
+    if VERBOSE: print(f'-Get PE from {start_time_bin} to {start_time_bin+dt_window_size} (ns): {s1-s0:.2f} s')
     
     #Muons
-    s0 = time()
-    if l.load_muon:
-        muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
-        muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
-    else:
-        muon_lines_tpc0 = [go.Scatter()]
-        muon_lines_tpc1 = [go.Scatter()]
-    s1 = time()
-    if VERBOSE: print(f'-Get new muon trajectories : {s1-s0:.2f} s')
-    if l.load_mcpart:
-        mcparts = l.get_mcpart_list()
-        mcparts_lines = [mcparts[i].plot_line(i,max_color=len(mcparts)) for i in range(len(mcparts))]
-    else:
-        mcparts_lines = [go.Scatter()]
+    # s0 = time()
+    # if l.load_muon:
+    #     muon_lines_tpc0 = [muons_tpc0[i].plot_line(i,0) for i in range(len(muons_tpc0))]
+    #     muon_lines_tpc1 = [muons_tpc1[i].plot_line(i,1) for i in range(len(muons_tpc1))]
+    # else:
+    #     muon_lines_tpc0 = [go.Scatter()]
+    #     muon_lines_tpc1 = [go.Scatter()]
+    # s1 = time()
+    # if VERBOSE: print(f'-Get new muon trajectories : {s1-s0:.2f} s')
+    
+    # #MCPart
+    # if l.load_mcpart:
+    #     mcparts = l.get_mcpart_list()
+    #     mcparts_lines_tpc0 = [mcparts[i].plot_line(i,0,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
+    #     mcparts_lines_tpc1 = [mcparts[i].plot_line(i,1,max_color=len(mcparts),filter_tpc=MCPART_FILTER_TPC) for i in range(len(mcparts))]
+    # else:
+    #     mcparts_lines_tpc0 = [go.Scatter()]
+    #     mcparts_lines_tpc1 = [go.Scatter()]
+    # s2 = time()
+    # if VERBOSE: print(f'-Get new mcpart trajectories : {s2-s1:.2f} s')
         
-    #CRTs
-    if l.load_crt:
-        crt_trks = l.get_crt_list()
-        crt_lines = [crt_trks[i].plot_line(i,max_color=len(crt_trks)) for i in range(len(crt_trks))]
-    else:
-        crt_lines = [go.Scatter()]
-    s2 = time()
-    if VERBOSE: print(f'-Get new mcpart trajectories : {s2-s1:.2f} s')
-
+    # #CRTs
+    # if l.load_crt:
+    #     crt_trks = l.get_crt_list()
+    #     crt_lines_tpc0 = [crt_trks[i].plot_line(i,0,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
+    #     crt_lines_tpc1 = [crt_trks[i].plot_line(i,1,max_color=len(crt_trks),filter_tpc=CRT_FILTER_TPC) for i in range(len(crt_trks))]
+    # else:
+    #     crt_lines_tpc0 = [go.Scatter()]
+    #     crt_lines_tpc1 = [go.Scatter()]
+    # s3 = time()
+    # if VERBOSE: print(f'-Get new crt trajectories : {s3-s2:.2f} s')
     return [get_tpc0(),get_tpc1()]
 
 
@@ -457,4 +513,4 @@ def update_waveform_graph(click_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)

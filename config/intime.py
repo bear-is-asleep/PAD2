@@ -7,7 +7,7 @@ DATA_DIR = '/sbnd/data/users/brindenc/PAD/intime/test_fcl/v4' #Waveforms and hit
 HDUMP_NAME = 'hitdumper_tree.root' #Required
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
 SM_NAME = 'test_hist.root' #SM_NAME = None if you did not make software metrics
-PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
+PMT_ARA_NAME = 'maps/PMT_ARAPUCA_info.csv' #Sets channel id and locations
 
 #PAD settings
 MMAX = 'dynamic' #Setting for max marker size. dynamic to set for every interval. global to set for max observable pe.

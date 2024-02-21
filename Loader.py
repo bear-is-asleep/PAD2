@@ -1,6 +1,5 @@
 import uproot
 import pandas as pd
-from variables import *
 from PMT import PMT
 from Muon import Muon
 from MCPart import MCPart
@@ -8,12 +7,13 @@ from CRT import CRTTrack
 from time import time
 import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members,is_traj_in_volume
-from utils.globals import SBND_VOL
+from utils.globals import *
 import os
 
 class Loader:
     def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
-                 load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='PMT_ARAPUCA_info.pkl'):
+                 load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='maps/PMT_ARAPUCA_info.csv'
+                 ,filter_primaries=True):
         """Loads and stores trees
 
         Args:
@@ -28,6 +28,7 @@ class Loader:
                                     and set to prompt to view prompt PE
             hdrkeys (list,optional): Keys denoting the event id
             pmt_ara_name (str,optional): Name of pkl file containing PMT/XA info
+            filter_primaries (bool,optional): Filter mcpart to only particles within +- 10 us of beam window
         """
         if VERBOSE: print('*'*60)
         
@@ -44,19 +45,19 @@ class Loader:
         
         #PMT/XA info
         s0 = time()
-        self.pmt_arapuca_info = pd.read_pickle(pmt_ara_name)
-        self.pmt_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 0 or ophit_opdet_type == 1').index)
-        self.xa_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 2 or ophit_opdet_type == 3').index)
+        self.pmt_arapuca_info = pd.read_csv(pmt_ara_name)
+        self.pmt_ids = list(self.pmt_arapuca_info.query('"pds" in pd_type').index)
+        self.xa_ids = list(self.pmt_arapuca_info.query('"xarapuca" in pd_type').index)
         self.pds_ids = list(self.pmt_arapuca_info.index)
         #TPCs
         self.pds_tpc0_ids = list(self.pmt_arapuca_info.query('opdet_tpc == 0').index)
         self.pds_tpc1_ids = list(self.pmt_arapuca_info.query('opdet_tpc == 1').index)
         #Coatings
-        self.pds_undefined_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == -1').index)
-        self.pmt_coated_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 0').index)
-        self.pmt_uncoated_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 1').index)
-        self.xa_vis_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 2').index)
-        self.xa_vuv_ids = list(self.pmt_arapuca_info.query('ophit_opdet_type == 3').index)
+        self.pds_undefined_ids = list(self.pmt_arapuca_info.query('"undefined" == pd_type').index)
+        self.pmt_coated_ids = list(self.pmt_arapuca_info.query('"pmt_coated" == pd_type').index)
+        self.pmt_uncoated_ids = list(self.pmt_arapuca_info.query('"pmt_uncoated" == pd_type').index)
+        self.xa_vis_ids = list(self.pmt_arapuca_info.query('"xarapuca_vis" == pd_type').index)
+        self.xa_vuv_ids = list(self.pmt_arapuca_info.query('"xarapuca_vuv" == pd_type').index)
         
         #Coatings in tpc
         self.pds_list = [
@@ -156,10 +157,11 @@ class Loader:
             parts['mcpart_process'] = mcpart_processes
             parts['mcpart_endprocess'] = mcpart_endprocesses
             
-            #Filter by timing - give 1600 ns buffer + 1600ns beam window
-            start_intime = parts.mcpart_StartT > -1600
-            end_intime = parts.mcpart_StartT < 3200
-            parts = parts[start_intime & end_intime]
+            #Filter by timing - give +- 10us buffer
+            if filter_primaries:
+                start_intime = parts.mcpart_StartT > -10000
+                end_intime = parts.mcpart_StartT < 11600
+                parts = parts[start_intime & end_intime]
             
             #Filter by primary
             self.mcpart_df = parts.query('mcpart_process == "primary"')
@@ -198,7 +200,7 @@ class Loader:
         self.event = event
         #if VERBOSE: print(f'Got run {run} subrun {subrun} event {event}')
         #Implement CRT here
-    def get_pmt_list(self,tpc=None,coatings=[0,1,2,3,4]):
+    def get_pmt_list(self,t0,t1,dt,tpc=None,coatings=[0,1,2,3,4]):
         """_summary_
         
         Args:
@@ -237,8 +239,10 @@ class Loader:
             pds_location = np.array([meta.ophit_opdet_x,
                                     meta.ophit_opdet_y,
                                     meta.ophit_opdet_z])
-            pds_coating = meta.ophit_opdet_type
+            pds_pd_type = meta.pd_type
             pds_tpc = meta.opdet_tpc
+            pds_sampling = meta.sampling
+            pds_box = meta.pds_box
             
             #Get op info
             s2 = time()
@@ -271,7 +275,7 @@ class Loader:
             else:
                 pmt_waveform = None
             
-            pmts.append(PMT(i, pds_coating, pds_tpc, pds_location, pmt_waveform, pds_op_pe, t1=t1, t0=t0, dt=dt))
+            pmts.append(PMT(i, pds_pd_type, pds_tpc, pds_location, pds_sampling, pds_box,waveform=pmt_waveform, op_pe=pds_op_pe, t1=t1, t0=t0, dt=dt))
         s1 = time()
         if VERBOSE: print(f'Get PDS objs : {s1-s0:.2f} s')
         return pmts
@@ -279,11 +283,11 @@ class Loader:
         
         muons = []
         #Extract info into arrays
-        trk_types, tpcs, x1s, y1s, z1s, x2s, y2s, z2s, theta_xzs, theta_yzs = self.muon_evt.muontrk_type.values, self.muon_evt.muontrk_tpc.values, self.muon_evt.muontrk_x1.values, self.muon_evt.muontrk_y1.values, self.muon_evt.muontrk_z1.values, self.muon_evt.muontrk_x2.values, self.muon_evt.muontrk_y2.values, self.muon_evt.muontrk_z2.values, self.muon_evt.muontrk_theta_xz.values, self.muon_evt.muontrk_theta_yz.values
+        trk_types, tpcs, x1s, y1s, z1s, x2s, y2s, z2s, theta_xzs, theta_yzs, t0s = self.muon_evt.muontrk_type.values, self.muon_evt.muontrk_tpc.values, self.muon_evt.muontrk_x1.values, self.muon_evt.muontrk_y1.values, self.muon_evt.muontrk_z1.values, self.muon_evt.muontrk_x2.values, self.muon_evt.muontrk_y2.values, self.muon_evt.muontrk_z2.values, self.muon_evt.muontrk_theta_xz.values, self.muon_evt.muontrk_theta_yz.values, self.muon_evt.muontrk_t0.values
         #keep specified muons
         for i,trk_type in enumerate(trk_types):
            if trk_type in types and tpc == tpcs[i]:
-               muons.append(Muon(trk_types[i], tpcs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], theta_xzs[i], theta_yzs[i]))
+               muons.append(Muon(trk_types[i], tpcs[i], x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], theta_xzs[i], theta_yzs[i], t0s[i]))
         return muons
     def get_mcpart_list(self,keep_pdgs=None):
         
@@ -324,9 +328,6 @@ class Loader:
             self.crt_evt.ct_pes.values,
         )
         for i in range(len(x1s)):
-            traj = [x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i]]
-            if filter_volume and not is_traj_in_volume(traj,SBND_VOL):
-                continue
             crt_trks.append(CRTTrack(x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], times[i], pes[i]))
         return crt_trks
     def get_pe_centroid(self,coating=0):
