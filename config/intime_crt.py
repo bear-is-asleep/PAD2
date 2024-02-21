@@ -17,11 +17,11 @@ HDRKEYS = ['run','subrun','event'] #event id keys
 MMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
 COATINGS = [0,1,2,3,4] #[undefined, coated pmt, uncoated pmt, vis xa, vuv xa]
-T0_THRESHOLDS = [10.,0.1] #Min pe to denote t0 [pmt,xa]
+T0_THRESHOLDS = [10.,1.] #Min pe to denote t0 [pmt,xa]
 MAX_SPREAD = 1000 #Max spread of all pds's t0 in ns
 t0 = -1600 #Start bin
 t1 = 1600 #End bin for -1600 - 1600 ns in 2 ns steps
-dt = 10  #ns step
+dt = 2  #ns step
 
 #CRT settings
 LOAD_CRT = True #CRT tracks 
