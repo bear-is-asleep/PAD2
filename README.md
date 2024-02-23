@@ -4,7 +4,8 @@
 Bear Carlson - bcarlson1@ufl.edu
 
 ## Quick setup
-```git clone https://github.com/bear-is-asleep/PAD2.git
+```
+git clone https://github.com/bear-is-asleep/PAD2.git
 cd PAD2
 source init.sh # (or source setup.sh if env is already setup)
 python run_pad.py
