@@ -4,16 +4,15 @@
 Bear Carlson - bcarlson1@ufl.edu
 
 ## Quick setup
-`git clone https://github.com/bear-is-asleep/PAD2.git`
-
-`cd PAD2`
-
-`source init.sh` (or `source setup.sh` if `env` is already setup)
-
-`python run_pad.py`
+```
+git clone https://github.com/bear-is-asleep/PAD2.git
+cd PAD2
+source init.sh # (or source setup.sh if env is already setup)
+python run_pad.py
+```
 
 ## Introduction
-Pad is a commissioning tool designed for SBND's PDS system. It's main purpose is to verify the channel mapping of the PDS components by overlying the light the observe with low level reconstructed tracks. The two types of tracks we use in commissioning are [muon tracks](https://github.com/SBNSoftware/sbndcode/blob/develop/sbndcode/Commissioning/MuonTrackProducer_module.cc) and CRT tracks (*to-do*). When a particle passes through the TPC, the PDS components closest to the track are expected to see the most light in general. So PAD is able to view the cumulative light within a time window collected by each PDS. Additionally, clicking on a PDS when in the PAD window shows the raw waveform in the plot window below. PAD also supports both TPCs which are updated simultaneously. Lastly, PAD runs on [dask](https://www.dask.org/) which skips port forwarding on the browser which makes PAD much faster than using terminal port forwarding.
+Pad is a commissioning tool designed for SBND's PDS system. It's main purpose is to verify the channel mapping of the PDS components by overlying the light the observe with low level reconstructed tracks. The two types of tracks we use in commissioning are [muon tracks](https://github.com/SBNSoftware/sbndcode/blob/develop/sbndcode/Commissioning/MuonTrackProducer_module.cc) and CRT tracks. When a particle passes through the TPC, the PDS components closest to the track are expected to see the most light in general. So PAD is able to view the cumulative light within a time window collected by each PDS. Additionally, clicking on a PDS when in the PAD window shows the raw waveform in the plot window below. PAD also supports both TPCs which are updated simultaneously. Lastly, PAD runs on [dask](https://www.dask.org/) which skips port forwarding on the browser which makes PAD much faster than using terminal port forwarding.
 
 ## Installing
 To install clone this repo wherever you want - I'd recommend your `app` directory
@@ -22,6 +21,8 @@ To install clone this repo wherever you want - I'd recommend your `app` director
 
 
 ## Preparing data
+⚠️ As of Feb. 23, 2024 CRT Track workflow requires `reco1` and `reco2` stages and are in development.
+
 The data requires optical detector information but the waveforms are optional. First set up `sbndcode`
 
 `source /cvmfs/sbnd.opensciencegrid.org/products/sbnd/setup_sbnd.sh`
@@ -57,6 +58,9 @@ The commissioning muon tracks are not turned on by default, but are optional for
 #### G4 primaries - optional
 If you want these from hitdumper set `readMCParticle: true` 
 
+#### CRT tracks -optional
+You must run `reco1` and `reco2` stages to get this information
+
 Now that the fcl is prepared you can run 
 
 `lar -c run_hitdumper.fcl -s [DetSim or PMT software trigger root file]`
@@ -73,19 +77,24 @@ To set it up just requires setting up the enviroment again
 
 `source setup.sh`
 
+You can also make your own configuration in `config/` and import it [here](https://github.com/bear-is-asleep/PAD2/blob/b23812ffc2b4e585a5c8e24b2d9f63835234508e/run_pad.py#L1).
+
 ### Run
 `Loader` drives PAD and sets up all of the products to include. You can find out more about the parameters of the loader by running `python run_pad.py --help`
 
 ```
-usage: run_pad.py [-h] [--data DATA] [--pad PAD] [--hdump_name HDUMP_NAME] [--sm_name SM_NAME] [--wfm_name WFM_NAME] [--load_muon LOAD_MUON] [--load_crt LOAD_CRT] [--load_mcpart LOAD_MCPART]
-                  [--mode MODE]
+python run_pad.py --help
+usage: run_pad.py [-h] [--data DATA] [--hdump_name HDUMP_NAME] [--sm_name SM_NAME]
+                  [--wfm_name WFM_NAME] [--load_muon LOAD_MUON] [--load_crt LOAD_CRT]
+                  [--load_mcpart LOAD_MCPART] [--mode MODE]
+                  [--filter_primaries FILTER_PRIMARIES] [--crt_filter_tpc CRT_FILTER_TPC]
+                  [--mcpart_filter_tpc MCPART_FILTER_TPC]
 
 Load data - default values are stored in the config selected
 
 optional arguments:
   -h, --help            show this help message and exit
   --data DATA           Path to the data
-  --pad PAD             PAD directory
   --hdump_name HDUMP_NAME
                         hitdumper file name
   --sm_name SM_NAME     pmt software metrics file name
@@ -96,13 +105,20 @@ optional arguments:
   --load_mcpart LOAD_MCPART
                         load mcpart info
   --mode MODE           Optical detector mode
+  --filter_primaries FILTER_PRIMARIES
+                        Filter mcpart to +- 10us around beam window
+  --crt_filter_tpc CRT_FILTER_TPC
+                        Filter CRT tracks to TPC
+  --mcpart_filter_tpc MCPART_FILTER_TPC
+                        Filter MCPart to TPC
 ```
 
 
 Alternatively you can set the filenames using a config. Set this line `from config.default import *` to point to you configuration file, which should be formatted like this
 
 ```
-#default.py example
+#default.py example - 
+
 
 #Get directories
 DATA_DIR = '/sbnd/data/users/brindenc/PAD/test_fcl/v1' #Waveforms and hitdumper location
@@ -111,17 +127,33 @@ DATA_DIR = '/sbnd/data/users/brindenc/PAD/test_fcl/v1' #Waveforms and hitdumper 
 HDUMP_NAME = 'hitdumper_tree.root' #HDUMP_NAME = None if you did not make hitdumper
 WFM_NAME = 'test_hist.root' #WFM_NAME = None if you did not make waveforms
 SM_NAME = 'test_hist.root' #SM_NAME = None if you did not make software metrics
-PMT_ARA_NAME = 'PMT_ARAPUCA_info.pkl' #Sets channel id and locations
+PMT_ARA_NAME = 'maps/PMT_ARAPUCA_info.csv' #Sets channel id and locations
+HDRKEYS = ['run','subrun','event'] #event id keys
+
+#PDS settings
+MMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
+MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
+COATINGS = [0,1,2,3,4] #[undefined, coated pmt, uncoated pmt, vis xa, vuv xa]
+T0_THRESHOLDS = [10.,1.] #Min pe to denote t0 [pmt,xa]
+MAX_SPREAD = 1000 #Max spread of all pds's t0 in ns
+t0 = -1600 #Start bin
+t1 = 1600 #End bin for -1600 - 1600 ns in 2 ns steps
+dt = 2  #ns step
+
+#CRT settings
+LOAD_CRT = True #CRT tracks 
+CRT_FILTER_TPC = True #Filter CRT tracks to ones just in TPC
+
+#MUON settings
+LOAD_MUON = True #Muon tracks
+
+#MCPart settings
+LOAD_MCPART = True #G4 primary particles
+MCPART_FILTER_TIME = True #Filter MCPart to +- 10us around beam window
+MCPART_FILTER_TPC = True #Filter MCPart to TPC
 
 #PAD settings
-CMAX = 'global' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 VERBOSE = True
-HDRKEYS = ['run','subrun','event'] #event id keys
-LOAD_MUON = True #Muon tracks
-LOAD_CRT = False #CRT tracks (not supported yet)
-LOAD_MCPART = True #G4 primary particles
-MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
-COATINGS = [0,1,2,3,4] #all pds
 ```
 
 In the terminal at the base of your PAD directory type `python run_pad.py <--options>`. Dask will show a link to the event display like this
@@ -145,7 +177,7 @@ Opening `http://127.0.0.1:8050` in a browser will take you to the PAD display.
 ### Actions
 Time sliders change the range to integrate the PE for each PDS component
 * Moving the t0 slider will change the initial time for both TPCs
-* Moving the t1 slider will change the final time for both TPCs
+* Moving the window slider will change the final time for both TPCs
 * Takes about 100 ms to update
 
 A list of available runs are on the right
@@ -160,6 +192,5 @@ The waveforms for each TPC are shown just below in ADC vs. time [us] (*X-ARAPUCA
 
 
 ## To-do 
-* Get official channel mapping (current one stored in `PMT_ARAPUCA_info.pkl`)
 * Get X-ARAPUCA waveform information
-* Implement CRT tracks - new class
+* Get waveforms into a more suitable format without having to run the trigger chain.
