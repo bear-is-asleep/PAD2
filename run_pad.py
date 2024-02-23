@@ -1,13 +1,12 @@
 #Your config - you can also pass arguments
-#from config.xa_test_rodrigo import *
-from config.intime_crt import *
+from config.xa_test_rodrigo import *
+#from config.intime_crt import *
 
 #Boilerplate imports
 import dash
 from dash import dcc
 from dash import html
 import numpy as np
-from variables import *
 from Loader import Loader
 import plotly.graph_objects as go
 from time import time

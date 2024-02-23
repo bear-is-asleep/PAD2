@@ -1,7 +1,6 @@
 import plotly.graph_objects as go
 import numpy as np
 from utils.plotters import map_value_to_color
-from variables import *
 from utils.helpers import find_tpc_intersections,is_traj_in_volume
 from utils.globals import SBND_VOL,TPC0_VOL,TPC1_VOL
 
