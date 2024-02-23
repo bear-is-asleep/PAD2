@@ -4,6 +4,7 @@ import numpy as np
 from time import time
 #My imports
 from utils.plotters import map_value_to_color
+from utils.globals import *
 
 class PMT:
     def __init__(self, pmtid, pd_type, tpc, location, sampling, pds_box, waveform=None, op_pe=None, t1=0., t0=1600., dt=2.):

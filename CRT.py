@@ -12,8 +12,8 @@ class CRTTrack:
     self.true_end = [x2,y2,z2]
     #Start and end points are in the TPC
     self.start,self.end = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000)
-    self.start0,self.end0 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=100000,vol=TPC0_VOL)
-    self.start1,self.end1 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=100000,vol=TPC1_VOL)
+    self.start0,self.end0 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000,vol=TPC0_VOL)
+    self.start1,self.end1 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000,vol=TPC1_VOL)
     self.time = time
     self.pes = pes
     self.intpc0 = is_traj_in_volume([x1,y1,z1,x2,y2,z2],TPC0_VOL)
@@ -38,6 +38,8 @@ class CRTTrack:
     else:  
       z_values = np.linspace(self.true_start[2], self.true_end[2], num_points)
       y_values = np.linspace(self.true_start[1], self.true_end[1], num_points)
+      x1,y1,z1 = self.start
+      x2,y2,z2 = self.end
     
     text = f't : {self.time:.2f}'
     text += '<br>'

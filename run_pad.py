@@ -1,6 +1,6 @@
 #Your config - you can also pass arguments
-from config.xa_test_rodrigo import *
-#from config.intime_crt import *
+#from config.xa_test_rodrigo import *
+from config.intime_crt import *
 
 #Boilerplate imports
 import dash
@@ -90,8 +90,8 @@ end_bin = t1
 dt_window = t1-t0
 l.get_event(run,subrun,event)
 coatings = COATINGS #Select initial PDs to show
-max_marker_size = 50 #max marker size
-min_marker_size = 8 #min marker size
+max_marker_size = 30 
+min_marker_size = 4 
 
 #Muon init
 if l.load_muon:
@@ -133,13 +133,19 @@ def get_t0_minmax(max_spread=MAX_SPREAD):
     if len(t0s) == 0:
         tmax,tmin = 1,0
     else:
+        iterations = 0
         while (tmax - tmin) > max_spread:
             #get rid of outliers
             if len(t0s) == 0:
+                print(f'WARNING: No t0s found in range {tmin} to {tmax} ns with max spread {max_spread} ns')
+                break
+            if iterations > 10:
+                print(f'WARNING: Iteration timeout with max spread {max_spread} ns')
                 break
             tmax = np.percentile(t0s,99.5) # 3 sigma
             tmin = np.percentile(t0s,0.5) # 3 sigma
             t0s = [t0 for t0 in t0s if t0 <= tmax and t0 >= tmin]
+            iterations += 1
         if len(t0s) == 0:
             tmax,tmin = 1,0
         else:
@@ -316,6 +322,7 @@ app.layout = html.Div(style={'display':'flex', 'font-family': 'Verdana'},childre
         html.Img(src=dash.get_asset_url('muon_track.png'), style={'width': '100%', 'height': 'auto'}) if l.load_muon else html.H3('Muon Tracks : NA'),
         html.Img(src=dash.get_asset_url('crt_track.png'), style={'width': '100%', 'height': 'auto'}) if l.load_crt else html.H3('CRT Tracks : NA'),
         html.Img(src=dash.get_asset_url('g4.png'), style={'width': '100%', 'height': 'auto'}) if l.load_mcpart else html.H3('G4 Primaries : NA'),
+        html.H4(f'Max PE : {mmax:.2f}'),
         #Not supported yet
         #html.H3(f'Current event : '),
         #html.H5(f'    Run: {l.run}, Subrun {l.subrun}, Event {l.event}'),
@@ -512,4 +519,4 @@ def update_waveform_graph(click_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)

@@ -30,7 +30,7 @@ class Loader:
             pmt_ara_name (str,optional): Name of pkl file containing PMT/XA info
             filter_primaries (bool,optional): Filter mcpart to only particles within +- 10 us of beam window
         """
-        if VERBOSE: print('*'*60)
+        if VERBOSE: print('*'*50)
         
         #Other vars
         self.data_dir = data_dir
@@ -138,7 +138,7 @@ class Loader:
         else:
             self.crt_df = None
         
-        #MCPart info
+        #MCPart info - optional
         if load_mcpart:
             part_keys = [key for key in tree.keys() if 'mcpart_' in key]
             parts = tree.arrays(self.hdrkeys+part_keys,library='pd')
@@ -157,10 +157,10 @@ class Loader:
             parts['mcpart_process'] = mcpart_processes
             parts['mcpart_endprocess'] = mcpart_endprocesses
             
-            #Filter by timing - give +- 10us buffer
+            #Filter by timing - give +- 100us buffer
             if filter_primaries:
-                start_intime = parts.mcpart_StartT > -10000
-                end_intime = parts.mcpart_StartT < 11600
+                start_intime = parts.mcpart_StartT > -100000
+                end_intime = parts.mcpart_StartT < 116000
                 parts = parts[start_intime & end_intime]
             
             #Filter by primary
@@ -277,7 +277,7 @@ class Loader:
             
             pmts.append(PMT(i, pds_pd_type, pds_tpc, pds_location, pds_sampling, pds_box,waveform=pmt_waveform, op_pe=pds_op_pe, t1=t1, t0=t0, dt=dt))
         s1 = time()
-        if VERBOSE: print(f'Get PDS objs : {s1-s0:.2f} s')
+        if VERBOSE: print(f'-Get PDS objs : {s1-s0:.2f} s')
         return pmts
     def get_muon_list(self,tpc,types=[0,1,2,3,4,5]):
         

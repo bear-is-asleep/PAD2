@@ -16,7 +16,7 @@ HDRKEYS = ['run','subrun','event'] #event id keys
 #PDS settings
 MMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. global to set for max observable pe.
 MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
-COATINGS = [0,1,2,3,4] #[undefined, coated pmt, uncoated pmt, vis xa, vuv xa]
+COATINGS = [0,1,2] #[undefined, coated pmt, uncoated pmt, vis xa, vuv xa]
 T0_THRESHOLDS = [10.,1.] #Min pe to denote t0 [pmt,xa]
 MAX_SPREAD = 1000 #Max spread of all pds's t0 in ns
 t0 = -1600 #Start bin
@@ -25,15 +25,15 @@ dt = 2  #ns step
 
 #CRT settings
 LOAD_CRT = True #CRT tracks 
-CRT_FILTER_TPC = True #Filter CRT tracks to ones just in TPC
+CRT_FILTER_TPC = False #Filter CRT tracks to ones just in TPC
 
 #MUON settings
-LOAD_MUON = True #Muon tracks
+LOAD_MUON = False #Muon tracks
 
 #MCPart settings
 LOAD_MCPART = True #G4 primary particles
-MCPART_FILTER_TIME = True #Filter MCPart to +- 10us around beam window
-MCPART_FILTER_TPC = True #Filter MCPart to TPC
+MCPART_FILTER_TIME = True #Filter MCPart to +- 100us around beam window
+MCPART_FILTER_TPC = False #Filter MCPart to TPC
 
 #PAD settings
 VERBOSE = True
