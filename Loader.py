@@ -1,19 +1,21 @@
 import uproot
 import pandas as pd
+from time import time
+import numpy as np
+import os
+from tqdm import tqdm
+
 from PMT import PMT
 from Muon import Muon
 from MCPart import MCPart
 from CRT import CRTTrack
-from time import time
-import numpy as np
 from utils.helpers import convert_edges_to_centers,get_common_members,is_traj_in_volume
 from utils.globals import *
-import os
 
 class Loader:
     def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
                  load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='maps/PMT_ARAPUCA_info.csv'
-                 ,filter_primaries=True):
+                 ,filter_primaries=True,max_entries=10000,wfm_range=None):
         """Loads and stores trees
 
         Args:
@@ -29,6 +31,8 @@ class Loader:
             hdrkeys (list,optional): Keys denoting the event id
             pmt_ara_name (str,optional): Name of pkl file containing PMT/XA info
             filter_primaries (bool,optional): Filter mcpart to only particles within +- 10 us of beam window
+            max_entries (int,optional): Maximum number of entries to load
+            wfm_range (list,optional): Range of waveforms to display in us
         """
         if VERBOSE: print('*'*50)
         
@@ -42,12 +46,13 @@ class Loader:
         self.load_crt = load_crt
         self.load_mcpart = load_mcpart
         self.hdrkeys = hdrkeys
+        self.wfm_range = wfm_range
         
         #PMT/XA info
         s0 = time()
         self.pmt_arapuca_info = pd.read_csv(pmt_ara_name)
-        self.pmt_ids = list(self.pmt_arapuca_info.query('"pds" in pd_type').index)
-        self.xa_ids = list(self.pmt_arapuca_info.query('"xarapuca" in pd_type').index)
+        # self.pmt_ids = list(self.pmt_arapuca_info.query('"pds" in pd_type').index)
+        # self.xa_ids = list(self.pmt_arapuca_info.query('"xarapuca" in pd_type').index)
         self.pds_ids = list(self.pmt_arapuca_info.index)
         #TPCs
         self.pds_tpc0_ids = list(self.pmt_arapuca_info.query('opdet_tpc == 0').index)
@@ -56,8 +61,10 @@ class Loader:
         self.pds_undefined_ids = list(self.pmt_arapuca_info.query('"undefined" == pd_type').index)
         self.pmt_coated_ids = list(self.pmt_arapuca_info.query('"pmt_coated" == pd_type').index)
         self.pmt_uncoated_ids = list(self.pmt_arapuca_info.query('"pmt_uncoated" == pd_type').index)
+        self.pmt_ids = self.pmt_coated_ids + self.pmt_uncoated_ids
         self.xa_vis_ids = list(self.pmt_arapuca_info.query('"xarapuca_vis" == pd_type').index)
         self.xa_vuv_ids = list(self.pmt_arapuca_info.query('"xarapuca_vuv" == pd_type').index)
+        self.xa_ids = self.xa_vis_ids + self.xa_vuv_ids
         
         #Coatings in tpc
         self.pds_list = [
@@ -94,25 +101,42 @@ class Loader:
             tree = uproot.open(f'{data_dir}/{self.hdump_name}:hitdumper;1/hitdumpertree;1')
         s1 = time()
         self.run_list = tree.arrays(self.hdrkeys,library='pd').values
+        if max_entries is None:
+            self.entries = tree.num_entries
+        else:
+            self.entries = min(tree.num_entries,max_entries)
+        #Check for unique run values, if they're not unique then there are duplicate events and we will raise an error
+        if len(self.run_list) != len(np.unique(self.run_list,axis=0)):
+            raise Exception(f'Error: Duplicate events in {self.data_dir}/{self.hdump_name}')
         if VERBOSE: print(f'Load commissioning tree ({len(self.run_list)} events) : {s1-s0:.2f} s')
         if VERBOSE and len(self.run_list) >= 100: print(f'WARNING: Loading too many events. This will probably kill the kernel.')
         
         #Op info
         s0 = time()
+        if VERBOSE: print(f'Loading op info for {self.entries} events...')
         opkeys = [key for key in tree.keys() if 'op' == key[:2]]
         pmtsoftkeys = [key for key in tree.keys() if 'ch_' in key]
-        if mode == 'op':
-            self.op_df = tree.arrays(self.hdrkeys+opkeys,library='pd')
-        elif mode == 'prompt' or mode == 'prelim':
-            self.op_df = tree.arrays(self.hdrkeys+pmtsoftkeys,library='pd')
-        else:
-            raise Exception(f'Invalid mode : {mode}')
+        #Load op info in chunks to save memory
+        chunk_size = 1
+        chunks = []
+        for start in tqdm(range(0,self.entries,chunk_size)):
+            #if VERBOSE: print(f'-Loading chunk {start//chunk_size+1}/{self.entries//chunk_size}')
+            stop = min(start+chunk_size,self.entries)
+            if mode == 'op':
+                chunk = tree.arrays(self.hdrkeys+opkeys,library='pd', entry_start=start, entry_stop=stop)
+            elif mode == 'prompt' or mode == 'prelim':
+                chunk = tree.arrays(self.hdrkeys+pmtsoftkeys,library='pd', entry_start=start, entry_stop=stop)
+            else:
+                raise Exception(f'Invalid mode : {mode}')
+            chunks.append(chunk)
+        self.op_df = pd.concat(chunks)
         s1 = time()
         if VERBOSE: print(f'Load op info : {s1-s0:.2f} s')
         #PMT waveform info - optional
         
         if wfm_name is None:
             self.wtree = None
+            if VERBOSE: print(f'No waveform data provided')
         else:
             s0 = time()
             self.wtree = uproot.open(f'{data_dir}/{wfm_name}')
@@ -190,6 +214,14 @@ class Loader:
         if self.wtree is not None:
             if any([f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_' in k for k in self.wtree.keys()]):
                 self.waveform_hist_name = f'pmtSoftwareTrigger/run_{run}subrun_{subrun}event_{event}_pmtnum_PDSID;1'
+            elif any([f'wvfana/event_{event}' in k for k in self.wtree.keys()]):
+                #event_29_opchannel_163_pmt_coated_163
+                #event_29_opchannel_150_xarapuca_vuv_150
+                #event_29_opchannel_161_xarapuca_vis_161
+                #event_29_opchannel_192_pmt_uncoated_192
+                
+                #Since the end of the name is an indexer dependent on what's loaded, we're just going to filter by PDSID and PDSTYPE
+                self.waveform_hist_name = f'wvfana/event_{event}_opchannel_PDSID_PDSTYPE'
             else: 
                 if VERBOSE: print(f'Warning: waveform for {self.hdrkeys[0]} {run} {self.hdrkeys[1]} {subrun} {self.hdrkeys[2]} {event} not in file {self.data_dir}/{self.wfm_name}')
                 self.waveform_hist_name = None
@@ -259,19 +291,42 @@ class Loader:
             #if VERBOSE: print(f'-- get op time {s3-s2:.3f} s')
             
             #Check if the waveform exists
+            # print('pds_id : ',i)
+            # print('pds_pd_type : ',pds_pd_type)
+            # print(self.waveform_hist_name)
+            # print(i in self.pds_ids)
+            # print(self.pds_ids)
+            # print(self.wtree is not None)
             if i in self.pmt_ids and self.wtree is not None and self.waveform_hist_name is not None:
                 #if VERBOSE: print('pds : ',i)
                 #if i == 0: print('WTF*'*120)
                 #Get waveform info
                 s4 = time()
                 hist_name = self.waveform_hist_name.replace('PDSID',str(i))
-                hist = self.wtree[hist_name]
-                #print(hist.to_numpy()[1])
-                times = convert_edges_to_centers(hist.to_numpy()[1])
-                voltages = hist.to_numpy()[0]
-                pmt_waveform = {'time': times, 'voltage': voltages}
-                s5 = time()
-                #if VERBOSE: print(f'-- get waveform {s5-s4:.3f} s')
+                if 'PDSTYPE' in hist_name:
+                    hist_name = hist_name.replace('PDSTYPE',pds_pd_type)
+                #Now complete the key name based on what keys in the tree match what we have for hist_name
+                name_candidates = [k for k in self.wtree.keys() if hist_name in k]
+                if len(name_candidates) == 1:
+                    hist_name = name_candidates[0]
+                else:
+                    raise Exception(f'Error: Multiple candidates for {hist_name} in {self.data_dir}/{self.wfm_name}')
+                    print(name_candidates)
+                if hist_name in self.wtree.keys():  
+                    hist = self.wtree[hist_name]
+                    times = hist.axis().edges()
+                    voltages = hist.values()
+                    #Filter to time range of interest (conserves size)
+                    if self.wfm_range is not None: 
+                        inds = np.where((times >= self.wfm_range[0]) & (times <= self.wfm_range[1]))[0]
+                        times = times[inds]
+                        voltages = voltages[inds]
+                    pmt_waveform = {'time': times, 'voltage': voltages}
+                    s5 = time()
+                    #if VERBOSE: print(f'-- get waveform {s5-s4:.3f} s')
+                else:
+                    if VERBOSE: print(f'Warning: {hist_name} not in file {self.data_dir}/{self.wfm_name}')
+                    pmt_waveform = None
             else:
                 pmt_waveform = None
             

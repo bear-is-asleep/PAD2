@@ -1,3 +1,14 @@
+import os
+import numpy as np
+
+def get_random_map():
+    """
+    Get a random map from the maps folder
+    """
+    maps = os.listdir('maps')
+    maps = [f for f in maps if f.endswith('.csv')] #filter to only maps
+    return 'maps/'+maps[np.random.randint(len(maps))]
+
 #Coating dictionary
 COATING_MAP = {
   -1 : 'Undefined',

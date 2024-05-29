@@ -3,6 +3,8 @@ from datetime import date
 import matplotlib.pyplot as plt
 import utils
 import matplotlib.colors as mcolors
+import shutil
+from pathlib import Path
 
 day = date.today().strftime("%Y_%m_%d")
     
@@ -32,4 +34,43 @@ def map_value_to_color(value, min_val, max_val, cmap='viridis',return_hex=True,r
         mappable = cm.ScalarMappable(norm=norm, cmap=cmap)
         return rbg_color, mappable
     return rgb_color
+
+def move_file(fname,folder_name,overwrite=True):
+  # Move the file to the folder
+  src_file = f'{fname}'
+  dst_folder = Path(folder_name)
+  
+  # Make sure the folder exists
+  os.makedirs(folder_name, exist_ok=True)
+
+  # Check if the file exists in the source path
+  if os.path.isfile(src_file):
+
+    # Generate the destination path by appending the filename to the destination directory
+    dst_file = os.path.join(folder_name, os.path.basename(src_file))
+
+    if overwrite:
+      shutil.move(src_file, dst_file)
+    else:
+      # If the file already exists in the destination directory, make a copy with a numerical suffix
+      if os.path.exists(dst_file):
+        suffix = 1
+        while True:
+          new_dst_file = os.path.join(folder_name, os.path.splitext(os.path.basename(src_file))[0] + "_" + str(suffix) + os.path.splitext(os.path.basename(src_file))[1])
+          if not os.path.exists(new_dst_file):
+            shutil.copy2(src_file, new_dst_file)
+            dst_file = new_dst_file
+            break
+          suffix += 1
+      shutil.move(src_file, dst_file)
+
+def save_plot(fname, fig=None, ftype='.png', dpi=300, folder_name=None, overwrite=True):
+  if folder_name is None:
+    folder_name = f'Plots/Plots_{day}'
+  # Save the plot
+  if fig == None:
+    plt.savefig(f'{fname}{ftype}', bbox_inches="tight", dpi=dpi)
+  else:
+    fig.savefig(f'{fname}{ftype}', bbox_inches="tight", dpi=dpi)
+  move_file(f'{fname}{ftype}',folder_name,overwrite=overwrite)
   

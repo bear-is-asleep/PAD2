@@ -2,6 +2,7 @@
 import pandas as pd
 
 def switch_channels(df, i, j):
+    print(f'Switching channels {i} and {j}')
     #Save to a copy
     df_copy = df.copy()
     
@@ -21,6 +22,7 @@ op = pd.read_csv('PMT_ARAPUCA_info.csv')
 #TPC 0
 switch_channels(op,6,36).to_csv('PMT_ARAPUCA_info_6_36.csv') #coated to uncoated same box - edge
 switch_channels(op,16,40).to_csv('PMT_ARAPUCA_info_16_40.csv') #coated to uncoated same box - edge
+switch_channels(op,6,168).to_csv('PMT_ARAPUCA_info_6_168.csv') #coated to coated different box - edge, center
 switch_channels(op,6,88).to_csv('PMT_ARAPUCA_info_6_88.csv') #coated to coated different box (but close) - edge
 switch_channels(op,16,88).to_csv('PMT_ARAPUCA_info_16_88.csv') #coated to coated different box (but close) - edge
 switch_channels(op,16,10).to_csv('PMT_ARAPUCA_info_16_10.csv') #coated to coated different box (but close) - edge
@@ -28,6 +30,7 @@ switch_channels(op,6,8).to_csv('PMT_ARAPUCA_info_6_8.csv') #coated to coated sam
 switch_channels(op,90,164).to_csv('PMT_ARAPUCA_info_90_164.csv') #coated to coated different box (but close) - center
 switch_channels(op,90,194).to_csv('PMT_ARAPUCA_info_90_194.csv') #coated to uncoated different box (but close) - center
 switch_channels(op,116,194).to_csv('PMT_ARAPUCA_info_116_194.csv') #uncoated to uncoated different box (but close) - center
+switch_channels(op,274,302).to_csv('PMT_ARAPUCA_info_274_302.csv') #uncoated to coated same box - edge
 
 #TPC 1
 switch_channels(op,7,37).to_csv('PMT_ARAPUCA_info_7_37.csv') #coated to uncoated same box - edge
@@ -39,6 +42,9 @@ switch_channels(op,7,9).to_csv('PMT_ARAPUCA_info_7_9.csv') #coated to coated sam
 switch_channels(op,91,165).to_csv('PMT_ARAPUCA_info_91_165.csv') #coated to coated different box (but close) - center
 switch_channels(op,91,195).to_csv('PMT_ARAPUCA_info_91_195.csv') #coated to uncoated different box (but close) - center
 switch_channels(op,117,195).to_csv('PMT_ARAPUCA_info_117_195.csv') #uncoated to uncoated different box (but close) - center
+switch_channels(op,221,295).to_csv('PMT_ARAPUCA_info_221_295.csv') #coated to coated different box (but close) - edge
+switch_channels(op,195,271).to_csv('PMT_ARAPUCA_info_195_271.csv') #uncoated to uncoated different box (but close) - edge
+switch_channels(op,195,295).to_csv('PMT_ARAPUCA_info_195_295.csv') #uncoated to uncoated different box (but close) - center
 
 #Different tpcs
 switch_channels(op,6,7).to_csv('PMT_ARAPUCA_info_6_7.csv') #coated to coated different tpcs (same location) - edge

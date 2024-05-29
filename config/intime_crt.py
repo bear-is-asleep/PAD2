@@ -3,7 +3,7 @@
 #Get directories
 #DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/test_fcl/v5' #Waveforms and hitdumper location
 #DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/test_fcl/v6' #Waveforms and hitdumper location
-DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/intime'
+DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/intime/v1'
 #HDUMP_NAME = 'hitdumper_tree.root' #Required
 HDUMP_NAME = 'hitdumper_small.root'
 #HDUMP_NAME = 'hitdumper_full.root'
@@ -22,6 +22,8 @@ MAX_SPREAD = 1000 #Max spread of all pds's t0 in ns
 t0 = -1600 #Start bin
 t1 = 1600 #End bin for -1600 - 1600 ns in 2 ns steps
 dt = 2  #ns step
+MAX_ENTRIES = 5 #Max number of entries to load
+SET_TO_THRESHOLDS = False #Set colorbar scale to between t0 and t1 if True
 
 #CRT settings
 LOAD_CRT = True #CRT tracks 

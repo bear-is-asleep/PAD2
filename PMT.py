@@ -72,7 +72,7 @@ class PMT:
         
         
 
-    def plot_coordinates(self, start, end, pds_ids,cmap='plasma', cmin=0, cmax=None, msize_max=1., msize_min=1.):
+    def plot_coordinates(self, start, end, pds_ids,cmap='plasma', cmin=0, cmax=None, msize_max=1., msize_min=1., mmax=int(1e10)):
         """ 
         Plots PMTs onto PAD grid
 
@@ -87,6 +87,7 @@ class PMT:
             msize_min (float, optional): Defaults to 1..
             t0_threshold (float, optional): Min pe to denote t0.
                 Defaults to 0..
+            mmax (int, optional): Defaults to int(1e10). Max marker size
 
         Returns:
             go.Scatter: scatter point to be plotted on dash canvas
@@ -101,8 +102,17 @@ class PMT:
         cum_pe = self.get_pe_start_stop(start, end)
         s1 = time()
         #if VERBOSE: print(f'-- time to bin {s1-s0:.3f} s')
-        msize = cum_pe/msize_max  # marker size normalized to other pmts
-        msize = msize if msize > 5 else 5
+        msize = msize_max*cum_pe/mmax  # marker size normalized to other pmts
+        if msize < msize_min: #if pe is less than min, set to min
+            msize = msize_min
+        if msize > msize_max: #if pe is greater than mmax, set to max
+            msize = msize_max
+        if np.isnan(msize): #if pe is nan, set to min
+            #if VERBOSE: print('WARNING: msize is nan')
+            msize = msize_min
+        # if msize > msize_max:
+        #     msize = msize_max
+        
         hex_color = map_value_to_color(self.t0,cmin,cmax,cmap=cmap)
         text = f'ID : {self.id:.0f}'
         text += '<br>'
@@ -147,12 +157,12 @@ class PMT:
             go.Scatter: scatter point to be plotted on dash canvas
         """
         if self.waveform is not None:
-            if VERBOSE: print(f'Plotting waveform for PDS {self.id}')
+            #if VERBOSE: print(f'Plotting waveform for PDS {self.id}')
             return go.Scatter(
                 x=self.waveform['time'],
                 y=self.waveform['voltage'],
                 mode='lines',
-                name=f'Waveform for PDS {self.id}'
+                name=f'PDS {self.id}'
             )
         else:
             if VERBOSE: print(f'No waveform for PDS {self.id}')

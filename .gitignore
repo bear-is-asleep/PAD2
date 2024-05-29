@@ -10,3 +10,7 @@ nb/plots*
 Plots/
 *.root
 .config
+tests/pds/testing.ipynb
+tests/pds/plots*
+tests/*.png
+tests/*.root
