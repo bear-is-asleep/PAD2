@@ -1,7 +1,7 @@
 #different particles from particle gun
 
 #Get directories
-DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/test_fcl/v12' #Waveforms and hitdumper location
+DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/data/run_12877' #Waveforms and hitdumper location
 HDUMP_NAME = 'hitdumper_tree.root'
 SM_NAME = None
 PMT_ARA_NAME = 'maps/PMT_ARAPUCA_info.csv' #Sets channel id and locations

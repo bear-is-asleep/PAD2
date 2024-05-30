@@ -486,8 +486,6 @@ def update_waveform_graph(click_data):
         ind = [i for i,p in enumerate(pds_tpc0) if pmt_id == p.id] 
         assert len(ind) == 1, f'Error: More than one PDS with id {pmt_id}'
         ind = ind[0]
-        print(f'ind : {ind}')
-        print(f'pmt_id : {pmt_id}')
         s0 = time()
         waveform_data = pds_tpc0[ind].plot_waveform()
         s1 = time() 
