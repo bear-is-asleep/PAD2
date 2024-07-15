@@ -5,6 +5,7 @@
 #from config.intime_crt import *
 #from config.intime_notracks import *
 from config.pmt_data import *
+#from config.pmt_35kv_data import *
 
 #Boilerplate imports
 import dash
@@ -69,6 +70,7 @@ if VERBOSE:
     [print(f'-{key} : {value}') for key,value in vars(args).items()]
     print(f'-hdrkeys : {HDRKEYS}')
     print(f'-coatings : {COATINGS}')
+    print(f'-tshift : {tshift}')
     print(f'-t0 : {t0}')
     print(f'-t1 : {t1}')
     print(f'-dt : {dt}')
@@ -97,7 +99,8 @@ l = Loader(
     pmt_ara_name=args.map, 
     filter_primaries=args.filter_primaries,
     max_entries=args.max_entries,
-    wfm_range=WFM_RANGE
+    wfm_range=WFM_RANGE,
+    tshift=tshift
 )
 
 #Initialize display
@@ -454,6 +457,7 @@ def update_tpcs(start_time_bin, dt_window_size, n_clicks,values,run, subrun, eve
             else:
                 crt_lines_tpc0 = [go.Scatter()]
                 crt_lines_tpc1 = [go.Scatter()]
+            print(f'-Run {run} Subrun {subrun} Event {event} retrieved')
         else:
             print(f'-Run {run} Subrun {subrun} Event {event} not in file')
             if VERBOSE: 
@@ -524,4 +528,4 @@ def update_waveform_graph(click_data):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)

@@ -1,8 +1,11 @@
 #different particles from particle gun
 
 #Get directories
-DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/data/run14445' #Waveforms and hitdumper location
-HDUMP_NAME = 'hitdumper_tree.root'
+#DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/data/35kv_run/filter_20240701' #Waveforms and hitdumper location
+DATA_DIR = '/exp/sbnd/data/users/brindenc/PAD/data/35kv_run/run_14192' #Waveforms and hitdumper location
+#HDUMP_NAME = 'hitdumper_tree.root'
+#HDUMP_NAME = 'hitdumper_tree_light_filter_event2.root'
+HDUMP_NAME = 'hitdumper_tree_event2.root'
 SM_NAME = None
 PMT_ARA_NAME = 'maps/PMT_ARAPUCA_info.csv' #Sets channel id and locations
 HDRKEYS = ['run','subrun','event']
@@ -12,12 +15,12 @@ MMAX = 'dynamic' #Setting for max color. dynamic to set for every interval. glob
 MODE = 'op' #op for full opreco, prompt for software pe prompt, prelim for software pe prelim
 COATINGS = [1,2] #[undefined, coated pmt, uncoated pmt, vis xa, vuv xa]
 T0_THRESHOLDS = [20.,5.] #Min pe to denote t0 [pmt,xa]
-MAX_SPREAD = 1e10 #Max spread of all pds's t0 in ns
-tshift = 2135 #Time shift in us (add this to all peakT)
-t0 = 0 #Start bin [ns]
-t1 = 18.99*1e3 #End bin for -1600 - 1600 ns in 2 ns steps [ns]
-dt = 4  #10 ns step
-MAX_ENTRIES = 50 #Max number of entries to load
+MAX_SPREAD = 100 #Max spread of all pds's t0 in ns
+tshift = 0 #Time shift in ns
+t0 = -2150*1e3 #Start bin [ns]
+t1 = 0 #End bin for -1600 - 1600 ns in 2 ns steps [ns]
+dt = t1-t0  #ns step
+MAX_ENTRIES = None #Max number of entries to load
 SET_TO_THRESHOLDS = False #Set colorbar scale to between t0 and t1 if True
 
 #CRT settings

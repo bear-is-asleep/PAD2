@@ -15,7 +15,7 @@ from utils.globals import *
 class Loader:
     def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
                  load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='maps/PMT_ARAPUCA_info.csv'
-                 ,filter_primaries=True,max_entries=10000,wfm_range=None):
+                 ,filter_primaries=True,max_entries=10000,wfm_range=None,tshift=0.):
         """Loads and stores trees
 
         Args:
@@ -33,6 +33,7 @@ class Loader:
             filter_primaries (bool,optional): Filter mcpart to only particles within +- 10 us of beam window
             max_entries (int,optional): Maximum number of entries to load
             wfm_range (list,optional): Range of waveforms to display in us
+            tshift (float,optional): Time shift in ns for peakT values for PDS
         """
         if VERBOSE: print('*'*50)
         
@@ -130,6 +131,11 @@ class Loader:
                 raise Exception(f'Invalid mode : {mode}')
             chunks.append(chunk)
         self.op_df = pd.concat(chunks)
+        if tshift != 0:
+            self.op_df['ophit_peakT'] += tshift
+            _mmin = self.op_df.ophit_peakT.min()
+            _mmax = self.op_df.ophit_peakT.max()
+            if VERBOSE: print(f'Adding time shift of {tshift} ns to peakT (min,max) : ({_mmin:.3f},{_mmax:.3f} us)')
         s1 = time()
         if VERBOSE: print(f'Load op info : {s1-s0:.2f} s')
         #PMT waveform info - optional
