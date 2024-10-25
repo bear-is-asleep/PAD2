@@ -113,12 +113,15 @@ class PMT:
         # if msize > msize_max:
         #     msize = msize_max
         
-        hex_color = map_value_to_color(self.t0,cmin,cmax,cmap=cmap)
+        if self.t0 is not np.nan:
+            hex_color = map_value_to_color(self.t0,cmin,cmax,cmap=cmap)
+        else:
+            hex_color = 'white'
         text = f'ID : {self.id:.0f}'
         text += '<br>'
         text += f'Cum. PE : {cum_pe:.2f}'
         text += '<br>'
-        text += f't0 : {self.t0:.2f}'
+        text += f't0 [cm]: {self.t0:.2f}'
         text += '<br>'
         text += f'Sampling : {self.sampling}'
         text += '<br>'

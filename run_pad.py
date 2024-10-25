@@ -4,7 +4,8 @@
 #from config.intime import *
 #from config.intime_crt import *
 #from config.intime_notracks import *
-from config.pmt_data import *
+#from config.pmt_data import *
+from config.pmt_crt_data import *
 #from config.pmt_35kv_data import *
 
 #Boilerplate imports
@@ -59,6 +60,8 @@ parser.add_argument('--crt_filter_tpc',type=bool, default=CRT_FILTER_TPC, help='
 parser.add_argument('--mcpart_filter_tpc',type=bool, default=MCPART_FILTER_TIME, help='Filter MCPart to TPC')
 parser.add_argument('--max_entries',type=int, default=MAX_ENTRIES, help='Max number of entries to load')
 parser.add_argument('--map',type=str, default=PMT_ARA_NAME, help='PMT map')
+parser.add_argument('--crt_t0_min',type=float, default=CRT_T0_MIN, help='Min CRT t0 in ns')
+parser.add_argument('--crt_t0_max',type=float, default=CRT_T0_MAX, help='Max CRT t0 in ns')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -100,7 +103,9 @@ l = Loader(
     filter_primaries=args.filter_primaries,
     max_entries=args.max_entries,
     wfm_range=WFM_RANGE,
-    tshift=tshift
+    tshift=tshift,
+    crt_min_t0=args.crt_t0_min,
+    crt_max_t0=args.crt_t0_max
 )
 
 #Initialize display

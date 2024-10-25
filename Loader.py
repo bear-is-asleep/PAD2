@@ -15,7 +15,7 @@ from utils.globals import *
 class Loader:
     def __init__(self,data_dir,hdump_name=None,software_name=None,wfm_name=None,load_muon=False,
                  load_crt=False,load_mcpart=False,mode='op',hdrkeys=['run','subrun','event'],pmt_ara_name='maps/PMT_ARAPUCA_info.csv'
-                 ,filter_primaries=True,max_entries=10000,wfm_range=None,tshift=0.):
+                 ,filter_primaries=True,max_entries=10000,wfm_range=None,tshift=0.,crt_min_t0=-1e10,crt_max_t0=1e10):
         """Loads and stores trees
 
         Args:
@@ -34,6 +34,8 @@ class Loader:
             max_entries (int,optional): Maximum number of entries to load
             wfm_range (list,optional): Range of waveforms to display in us
             tshift (float,optional): Time shift in ns for peakT values for PDS
+            crt_min_t0 (float,optional): Minimum t0 for CRT tracks
+            crt_max_t0 (float,optional): Maximum t0 for CRT tracks
         """
         if VERBOSE: print('*'*50)
         
@@ -161,8 +163,10 @@ class Loader:
         #CRT info - optional
         if load_crt:
             s0 = time()
-            crt_trkkeys = [key for key in tree.keys() if 'ct_' in key]
+            crt_trkkeys = [key for key in tree.keys() if 'crt_track' in key]
             self.crt_df = tree.arrays(self.hdrkeys+crt_trkkeys,library='pd')
+            #Filter between t0 values
+            self.crt_df = self.crt_df.query(f'crt_track_t0 > {crt_min_t0} and crt_track_t0 < {crt_max_t0}')
             s1 = time()
             if VERBOSE: print(f'Load CRT tracks: {s1-s0:.2f} s')
         else:
@@ -378,18 +382,19 @@ class Loader:
     def get_crt_list(self,filter_volume=True):
         crt_trks = []
         #Extract info into arrays
-        x1s, y1s, z1s, x2s, y2s, z2s, times, pes = (
-            self.crt_evt.ct_x1.values,
-            self.crt_evt.ct_y1.values,
-            self.crt_evt.ct_z1.values,
-            self.crt_evt.ct_x2.values,
-            self.crt_evt.ct_y2.values,
-            self.crt_evt.ct_z2.values,
-            self.crt_evt.ct_time.values,
-            self.crt_evt.ct_pes.values,
+        x1s, y1s, z1s, x2s, y2s, z2s, t0s, t1s, pes = (
+            self.crt_evt.crt_track_x1.values,
+            self.crt_evt.crt_track_y1.values,
+            self.crt_evt.crt_track_z1.values,
+            self.crt_evt.crt_track_x2.values,
+            self.crt_evt.crt_track_y2.values,
+            self.crt_evt.crt_track_z2.values,
+            self.crt_evt.crt_track_t0.values,
+            self.crt_evt.crt_track_t1.values,
+            self.crt_evt.crt_track_pes.values,
         )
         for i in range(len(x1s)):
-            crt_trks.append(CRTTrack(x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], times[i], pes[i]))
+            crt_trks.append(CRTTrack(x1s[i], y1s[i], z1s[i], x2s[i], y2s[i], z2s[i], t0s[i], t1s[i], pes[i]))
         return crt_trks
     def get_pe_centroid(self,coating=0):
         pass

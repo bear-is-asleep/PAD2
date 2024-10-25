@@ -7,14 +7,15 @@ from utils.helpers import find_tpc_intersections,is_traj_in_volume
 from utils.globals import *
 
 class CRTTrack:
-  def __init__(self,x1,y1,z1,x2,y2,z2,time,pes):
+  def __init__(self,x1,y1,z1,x2,y2,z2,t0,t1,pes):
     self.true_start = [x1,y1,z1]
     self.true_end = [x2,y2,z2]
     #Start and end points are in the TPC
     self.start,self.end = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000)
     self.start0,self.end0 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000,vol=TPC0_VOL)
     self.start1,self.end1 = find_tpc_intersections(x1,y1,z1,x2,y2,z2,n=10000,vol=TPC1_VOL)
-    self.time = time
+    self.t0 = t0
+    self.t1 = t1
     self.pes = pes
     self.intpc0 = is_traj_in_volume([x1,y1,z1,x2,y2,z2],TPC0_VOL)
     self.intpc1 = is_traj_in_volume([x1,y1,z1,x2,y2,z2],TPC1_VOL)
@@ -41,15 +42,17 @@ class CRTTrack:
       x1,y1,z1 = self.start
       x2,y2,z2 = self.end
     
-    text = f't : {self.time:.2f}'
+    text = f't0 [ns]: {self.t0:.2f}'
     text += '<br>'
-    text += f'TPC start : ({x1:.2f},{y1:.2f},{z1:.2f})'
+    text += f't1 [ns]: {self.t1:.2f}'
     text += '<br>'
-    text += f'TPC end : ({x2:.2f},{y2:.2f},{z2:.2f})'
+    text += f'TPC start [cm]: ({x1:.2f},{y1:.2f},{z1:.2f})'
     text += '<br>'
-    text += f'True start : ({self.true_start[0]:.2f},{self.true_start[1]:.2f},{self.true_start[2]:.2f})'
+    text += f'TPC end [cm]: ({x2:.2f},{y2:.2f},{z2:.2f})'
     text += '<br>'
-    text += f'True end : ({self.true_end[0]:.2f},{self.true_end[1]:.2f},{self.true_end[2]:.2f})'
+    text += f'True start [cm]: ({self.true_start[0]:.2f},{self.true_start[1]:.2f},{self.true_start[2]:.2f})'
+    text += '<br>'
+    text += f'True end [cm]: ({self.true_end[0]:.2f},{self.true_end[1]:.2f},{self.true_end[2]:.2f})'
     text += '<br>'
     text += f'PE : {self.pes:.2f}'
     text += '<br>'
